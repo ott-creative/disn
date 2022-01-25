@@ -1,0 +1,10 @@
+[dev-dependencies]
+dotenv = "0.15"
+reqwest = "0.11"
+sqlx = { version = "0.5", features = [
+    "runtime-tokio-rustls",
+    "postgres",
+    "macros",
+    "chrono",
+    "uuid",
+] }

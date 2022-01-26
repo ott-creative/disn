@@ -12,7 +12,7 @@ async fn main() {
         .init();
 
     use config::db::DbPool;
-    let pg_pool = sqlx::PgPool::retrieve().await;
+    let pg_pool = sqlx::PgPool::retrieve(true).await;
     let config = config::env::ServerConfig::parse();
     let addr = format!("{}:{}", config.host, config.port);
     tracing::info!("listening on {}", addr);

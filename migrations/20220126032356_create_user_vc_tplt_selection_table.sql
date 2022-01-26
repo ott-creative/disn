@@ -1,3 +1,4 @@
+-- Add migration script here
 CREATE TABLE IF NOT EXISTS user_vc_tplt_selections (
     user_id UUID PRIMARY KEY NOT NULL,
     tplt_id UUID NOT NULL,

@@ -25,6 +25,6 @@ pub struct PgConfig {
     pub pg_port: u16,
     #[clap(default_value = "postgres", env)]
     pub pg_user: String,
-    #[clap(default_value = "", env)]
+    #[clap(default_value = "password", env)]
     pub pg_password: String,
 }

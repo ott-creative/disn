@@ -24,6 +24,7 @@ mod model;
 mod response;
 mod service;
 mod sql;
+pub mod telemetry;
 mod utils;
 
 pub mod constants;

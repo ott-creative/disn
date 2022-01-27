@@ -1,19 +1,20 @@
 use disn::configuration::get_configuration;
+use disn::telemetry::{get_subscriber, init_subscriber};
+use sqlx::postgres::PgPoolOptions;
 use std::net::TcpListener;
-use tracing_subscriber::EnvFilter;
 
 #[tokio::main]
 async fn main() {
     dotenv::dotenv().ok();
-    let configuration = get_configuration().expect("Failed to read configuration.");
-    tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::from_default_env())
-        .pretty()
-        .init();
+    let subscriber = get_subscriber("disn".into(), "info".into(), std::io::stdout);
+    init_subscriber(subscriber);
 
-    let pg_pool = sqlx::PgPool::connect(&configuration.database.connection_string())
-        .await
-        .expect("Failed to connect to Postgres.");
+    let configuration = get_configuration().expect("Failed to read configuration.");
+
+    let pg_pool = PgPoolOptions::new()
+        .connect_timeout(std::time::Duration::from_secs(2))
+        .connect_lazy_with(configuration.database.with_db());
+
     let addr = format!(
         "{}:{}",
         configuration.server.host, configuration.server.port

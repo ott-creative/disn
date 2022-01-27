@@ -1,4 +1,3 @@
-use crate::config::env::API_VERSION;
 use crate::response::{ApiSuccess, Success};
 use axum::{extract::Extension, http::StatusCode, Json};
 use sqlx::PgPool;
@@ -22,7 +21,7 @@ pub async fn vc_tplt_create(
     Ok((
         StatusCode::CREATED,
         Json(ApiSuccess {
-            api_version: API_VERSION.to_string(),
+            api_version: Default::default(),
             body: Success { data: vc_tplt },
         }),
     ))

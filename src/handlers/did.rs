@@ -1,4 +1,3 @@
-use crate::config::env::API_VERSION;
 use crate::response::{ApiSuccess, Success};
 use axum::Json;
 
@@ -9,7 +8,7 @@ use crate::{error::ApiResult, service::did::DidService};
 pub async fn did_create() -> ApiResult<Json<ApiSuccess<String>>> {
     let did = DidService::did_create().await?;
     Ok(Json(ApiSuccess {
-        api_version: API_VERSION.to_string(),
+        api_version: Default::default(),
         body: Success { data: did },
     }))
 }

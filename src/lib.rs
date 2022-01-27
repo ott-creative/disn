@@ -15,6 +15,7 @@ use tower_http::{cors::CorsLayer, trace::TraceLayer};
 
 use std::net::TcpListener;
 
+pub mod configuration;
 mod dto;
 mod error;
 mod extractors;
@@ -25,7 +26,7 @@ mod service;
 mod sql;
 mod utils;
 
-pub mod config;
+pub mod constants;
 
 fn app(pg_pool: PgPool) -> Router {
     let middleware_stack = ServiceBuilder::new()

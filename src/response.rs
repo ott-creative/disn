@@ -30,6 +30,13 @@ Failure:
 }
 */
 
+use crate::configuration::get_configuration;
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ApiVersion {
+    api_version: String,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Success<T> {
     pub data: T,
@@ -43,7 +50,8 @@ pub struct Failure {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ApiSuccess<T> {
-    pub api_version: String,
+    #[serde(flatten)]
+    pub api_version: ApiVersion,
 
     #[serde(flatten)]
     pub body: Success<T>,
@@ -51,8 +59,18 @@ pub struct ApiSuccess<T> {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ApiFailure {
-    pub api_version: String,
+    #[serde(flatten)]
+    pub api_version: ApiVersion,
 
     #[serde(flatten)]
     pub body: Failure,
+}
+
+impl Default for ApiVersion {
+    fn default() -> ApiVersion {
+        let configuration = get_configuration().expect("Failed to read configuration.");
+        ApiVersion {
+            api_version: configuration.api_version,
+        }
+    }
 }

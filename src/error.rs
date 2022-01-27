@@ -1,4 +1,3 @@
-use crate::config::env::API_VERSION;
 use crate::response::{ApiFailure, Failure};
 use axum::{http::StatusCode, Json};
 use serde_json::{json, Value};
@@ -49,7 +48,7 @@ impl From<Error> for ApiError {
         };
         //let payload = json!({"message": err.to_string()});
         let payload = json!(ApiFailure {
-            api_version: API_VERSION.to_string(),
+            api_version: Default::default(),
             body: Failure {
                 code: status.as_u16(),
                 message: err.to_string()

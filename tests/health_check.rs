@@ -1,13 +1,11 @@
-use clap::Parser;
-use config::env::PgConfig;
-use disn::config;
+use disn::configuration::get_configuration;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use std::net::TcpListener;
 use uuid::Uuid;
 
 #[tokio::test]
 async fn health_check_works() {
-    dotenv::dotenv().ok();
+    //dotenv::dotenv().ok();
 
     let pg_pool = prepare_db().await;
     // Arrange
@@ -39,24 +37,27 @@ fn spawn_app(pg_pool: PgPool) -> String {
 }
 
 async fn prepare_db() -> PgPool {
-    let db_name = Uuid::new_v4().to_string();
-    let config = PgConfig::parse();
-    let connection_str = format!(
-        "postgres://{}:{}@{}:{}",
-        config.pg_user, config.pg_password, config.pg_host, config.pg_port
-    );
+    let mut configuration = get_configuration().expect("Failed to read configuration");
+    configuration.database.database_name = Uuid::new_v4().to_string();
+    let connection_string = configuration.database.connection_string_without_db();
 
-    let mut connection = PgConnection::connect(&connection_str)
+    let mut connection = PgConnection::connect(&connection_string)
         .await
         .expect("Failed to connect to Postgres");
 
     connection
-        .execute(format!(r#"CREATE DATABASE "{}";"#, db_name).as_str())
+        .execute(
+            format!(
+                r#"CREATE DATABASE "{}";"#,
+                configuration.database.database_name
+            )
+            .as_str(),
+        )
         .await
         .expect("Failed to create database.");
 
     // Migrate database
-    let connection_pool = PgPool::connect(&format!("{}/{}", connection_str, db_name))
+    let connection_pool = PgPool::connect(&configuration.database.connection_string())
         .await
         .expect("Failed to connect to Postgres.");
 

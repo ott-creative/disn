@@ -1,10 +1,9 @@
-use crate::config::env::API_VERSION;
 use crate::response::{ApiSuccess, Success};
 use axum::{extract::Extension, http::StatusCode, Json};
 use sqlx::PgPool;
 
 use crate::{
-    config::constants::BEARER,
+    constants::BEARER,
     dto::{LoginInput, RegisterInput, TokenPayload},
     error::{ApiResult, Error},
     service::user::AuthService,
@@ -21,7 +20,7 @@ pub async fn login(
         .map_err(|_| Error::WrongCredentials)?;
     let token = jwt::sign(user.id)?;
     Ok(Json(ApiSuccess {
-        api_version: API_VERSION.to_string(),
+        api_version: Default::default(),
         body: Success {
             data: TokenPayload {
                 access_token: token,
@@ -41,7 +40,7 @@ pub async fn register(
     Ok((
         StatusCode::CREATED,
         Json(ApiSuccess {
-            api_version: API_VERSION.to_string(),
+            api_version: Default::default(),
             body: Success {
                 data: TokenPayload {
                     access_token: token,

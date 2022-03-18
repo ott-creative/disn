@@ -3,22 +3,27 @@ extern crate lazy_static;
 #[macro_use]
 extern crate serde;
 
-use axum::{
-    routing::{get, post},
-    AddExtensionLayer, Router,
-};
 use futures::Future;
 use hyper;
 use sqlx::PgPool;
 use tower::ServiceBuilder;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
 
-use std::net::TcpListener;
+use poem::{
+    error::InternalServerError, listener::TcpListener, middleware::Cors, web::Data, Endpoint,
+    EndpointExt, Result, Route, Server,
+};
+use poem_openapi::{
+    param::Path,
+    payload::{Json, PlainText},
+    ApiResponse, Object, OpenApi, OpenApiService,
+};
 
+mod api;
 pub mod configuration;
 mod dto;
 mod error;
-mod extractors;
+//mod extractors;
 mod handlers;
 mod model;
 mod response;
@@ -29,8 +34,8 @@ mod utils;
 
 pub mod constants;
 
-fn app(pg_pool: PgPool) -> Router {
-    let middleware_stack = ServiceBuilder::new()
+fn app(pg_pool: PgPool) -> impl Endpoint {
+    /*let middleware_stack = ServiceBuilder::new()
         .layer(TraceLayer::new_for_http())
         .layer(CorsLayer::permissive())
         .layer(AddExtensionLayer::new(pg_pool))
@@ -47,12 +52,27 @@ fn app(pg_pool: PgPool) -> Router {
         .nest("/api/:v/auth", auth_api)
         .nest("/api/:v/vc", vc_api)
         .nest("/api/:v/did", did_api)
-        .layer(middleware_stack)
+        .layer(middleware_stack)*/
+    let api_service =
+        OpenApiService::new(api::DidApi, "DID Api", "1.0.0").server("http://localhost:3000");
+    let ui = api_service.swagger_ui();
+    let spec = api_service.spec();
+    Route::new()
+        .nest("/", api_service)
+        .nest("/ui", ui)
+        .at("/spec", poem::endpoint::make_sync(move |_| spec.clone()))
+        .with(Cors::new())
+        .data(pg_pool)
 }
 
 /// Provide database connection, and TCP listener, this can be different in production build and test build
-pub fn server(pg_pool: PgPool, listener: TcpListener) -> impl Future<Output = hyper::Result<()>> {
-    axum::Server::from_tcp(listener)
-        .unwrap()
-        .serve(app(pg_pool).into_make_service())
+pub fn server(
+    pg_pool: PgPool,
+    listener: TcpListener<String>,
+) -> impl Future<Output = std::result::Result<(), std::io::Error>> {
+    /*axum::Server::from_tcp(listener)
+    .unwrap()
+    .serve(app(pg_pool).into_make_service())*/
+
+    Server::new(listener).run(app(pg_pool))
 }

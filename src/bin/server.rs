@@ -1,7 +1,7 @@
 use disn::configuration::get_configuration;
 use disn::telemetry::{get_subscriber, init_subscriber};
+use poem::listener::TcpListener;
 use sqlx::postgres::PgPoolOptions;
-use std::net::TcpListener;
 
 #[tokio::main]
 async fn main() {
@@ -20,7 +20,7 @@ async fn main() {
         configuration.server.host, configuration.server.port
     );
     tracing::info!("listening on {}", addr);
-    let listener = TcpListener::bind(addr).expect("Failed to bind on port");
+    let listener = TcpListener::bind(addr);
 
     let server = disn::server(pg_pool, listener);
 

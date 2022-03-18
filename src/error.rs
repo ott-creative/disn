@@ -1,5 +1,5 @@
 use crate::response::{ApiFailure, Failure};
-use axum::{http::StatusCode, Json};
+use poem::{http::StatusCode, web::Json};
 use serde_json::{json, Value};
 use thiserror::Error;
 
@@ -14,13 +14,11 @@ pub enum Error {
     #[error(transparent)]
     TokioRecvError(#[from] tokio::sync::oneshot::error::RecvError),
     #[error(transparent)]
-    AxumTypedHeaderError(#[from] axum::extract::rejection::TypedHeaderRejection),
-    #[error(transparent)]
-    AxumExtensionError(#[from] axum::extract::rejection::ExtensionRejection),
-    #[error(transparent)]
     ValidationError(#[from] validator::ValidationErrors),
     #[error(transparent)]
     SsiDidJwkGenerationError(#[from] ssi::error::Error),
+    //#[error(transparent)]
+    //PoemError(#[from] poem::Error),
     #[error("wrong credentials")]
     WrongCredentials,
     #[error("password doesn't match")]

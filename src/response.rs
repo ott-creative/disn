@@ -29,10 +29,14 @@ Failure:
     }
 }
 */
-
 use crate::configuration::get_configuration;
+use poem_openapi::{
+    param::Path,
+    payload::{Json, PlainText},
+    ApiResponse, Object, OpenApi, OpenApiService,
+};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Object)]
 pub struct ApiVersion {
     api_version: String,
 }
@@ -42,7 +46,7 @@ pub struct Success<T> {
     pub data: T,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Object)]
 pub struct Failure {
     pub code: u16,
     pub message: String,
@@ -57,7 +61,7 @@ pub struct ApiSuccess<T> {
     pub body: Success<T>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Object)]
 pub struct ApiFailure {
     #[serde(flatten)]
     pub api_version: ApiVersion,

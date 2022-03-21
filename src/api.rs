@@ -1,5 +1,7 @@
 use crate::service::did::DidService;
-use poem_openapi::{payload::Json, ApiResponse, OpenApi};
+use poem::{web::Data, Endpoint};
+use poem_openapi::{param::Path, payload::Json, ApiResponse, OpenApi};
+use sqlx::PgPool;
 
 pub struct DidApi;
 
@@ -17,11 +19,17 @@ enum CreateDidResponse {
 impl DidApi {
     /// Create did
     #[oai(path = "/did/create", method = "post")]
-    async fn create(&self) -> CreateDidResponse {
-        let result = DidService::did_create().await;
-
-        match result {
+    async fn create(&self, pool: Data<&PgPool>) -> CreateDidResponse {
+        match DidService::did_create(&pool.0).await {
             Ok(did) => CreateDidResponse::Ok(Json(did)),
+            _ => CreateDidResponse::CreateFail,
+        }
+    }
+
+    #[oai(path = "/did/resolve/:id", method = "get")]
+    async fn resolve(&self, _pool: Data<&PgPool>, id: Path<String>) -> CreateDidResponse {
+        match DidService::did_resolve(&id.0).await {
+            Ok(doc) => CreateDidResponse::Ok(Json(doc)),
             _ => CreateDidResponse::CreateFail,
         }
     }

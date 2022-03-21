@@ -4,8 +4,8 @@ use uuid::Uuid;
 use crate::{
     error::Result,
     model::{
-        CreateUserData, CreateUserVcTpltSelectionData, CreateVcTpltData, User, UserVcTpltSelection,
-        VcTplt,
+        CreateDidData, CreateUserData, CreateUserVcTpltSelectionData, CreateVcTpltData, Did, User,
+        UserVcTpltSelection, VcTplt,
     },
 };
 
@@ -101,5 +101,30 @@ impl UserVcTpltSelection {
             .bind(data.updated_at)
             .fetch_one(pool)
             .await?)
+    }
+}
+
+impl Did {
+    pub async fn create(data: CreateDidData, pool: &PgPool) -> Result<Did> {
+        let sql = format!(
+            "
+            INSERT INTO {} (id, jwk, created_at, updated_at)
+            VALUES ($1, $2, $3, $4)
+            RETURNING *
+            ",
+            Did::TABLE
+        );
+        Ok(sqlx::query_as(&sql)
+            .bind(data.id)
+            .bind(data.jwk)
+            .bind(data.created_at)
+            .bind(data.updated_at)
+            .fetch_one(pool)
+            .await?)
+    }
+
+    pub async fn find_by_id(id: String, pool: &PgPool) -> Result<Did> {
+        let sql = format!("SELECT * FROM {} WHERE id = $1 LIMIT 1", Did::TABLE);
+        Ok(sqlx::query_as(&sql).bind(id).fetch_one(pool).await?)
     }
 }

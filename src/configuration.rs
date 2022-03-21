@@ -9,6 +9,7 @@ pub struct Settings {
     pub database: DatabaseSettings,
     pub server: ServerSettings,
     pub security: SecuritySettings,
+    pub didkit: DidkitSettings,
 }
 
 #[derive(serde::Deserialize)]
@@ -32,6 +33,11 @@ pub struct DatabaseSettings {
 #[derive(serde::Deserialize)]
 pub struct SecuritySettings {
     pub jwt_secret: Secret<String>,
+}
+
+#[derive(serde::Deserialize)]
+pub struct DidkitSettings {
+    pub path: String,
 }
 
 impl DatabaseSettings {

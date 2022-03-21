@@ -84,3 +84,23 @@ pub struct VcTpltInstance {
 impl VcTpltInstance {
     pub const TABLE: &'static str = "vc_tplt_instances";
 }
+
+#[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
+pub struct Did {
+    pub id: String,
+    pub jwk: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+impl Did {
+    pub const TABLE: &'static str = "dids";
+}
+
+#[derive(Debug)]
+pub struct CreateDidData {
+    pub id: String,
+    pub jwk: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}

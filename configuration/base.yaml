@@ -11,3 +11,5 @@ database:
   require_ssl: false
 security:
   jwt_secret: "please-change-me"
+didkit:
+  path: "/Users/chris/dev/ott/repo/disn_src/play/didkit"

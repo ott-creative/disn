@@ -38,6 +38,7 @@ pub struct SecuritySettings {
 #[derive(serde::Deserialize)]
 pub struct DidkitSettings {
     pub path: String,
+    pub api_key: String,
 }
 
 impl DatabaseSettings {

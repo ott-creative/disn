@@ -1793,8 +1793,10 @@ dependencies = [
  "dotenv",
  "futures",
  "headers",
+ "hmac 0.11.0",
  "hyper",
  "jsonwebtoken",
+ "jwt",
  "lazy_static",
  "once_cell",
  "poem",
@@ -1805,6 +1807,7 @@ dependencies = [
  "serde 1.0.136",
  "serde-aux",
  "serde_json",
+ "sha2 0.9.9",
  "sqlx",
  "ssi",
  "thiserror",
@@ -2752,6 +2755,21 @@ dependencies = [
  "serde 1.0.136",
  "serde_json",
  "simple_asn1 0.4.1",
+]
+
+[[package]]
+name = "jwt"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "98328bb4f360e6b2ceb1f95645602c7014000ef0c3809963df8ad3a3a09f8d99"
+dependencies = [
+ "base64 0.13.0",
+ "crypto-mac 0.11.1",
+ "digest 0.9.0",
+ "hmac 0.11.0",
+ "serde 1.0.136",
+ "serde_json",
+ "sha2 0.9.9",
 ]
 
 [[package]]

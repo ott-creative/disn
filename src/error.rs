@@ -1,6 +1,7 @@
 use crate::response::{ApiFailure, Failure};
 use poem::{http::StatusCode, web::Json};
 use serde_json::{json, Value};
+use std::io;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -17,6 +18,8 @@ pub enum Error {
     ValidationError(#[from] validator::ValidationErrors),
     #[error(transparent)]
     SsiDidJwkGenerationError(#[from] ssi::error::Error),
+    #[error(transparent)]
+    CommandError(#[from] io::Error),
     //#[error(transparent)]
     //PoemError(#[from] poem::Error),
     #[error("wrong credentials")]

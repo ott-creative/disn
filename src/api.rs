@@ -22,7 +22,7 @@ async fn api_checker(_req: &Request, api_key: ApiKey) -> Option<()> {
     //let server_key = req.data::<ServerKey>().unwrap();
     //VerifyWithKey::<()>::verify_with_key(api_key.key.as_str(), server_key).ok()
     let configuration = get_configuration().expect("Failed to read configuration.");
-    if api_key.key.eq(&configuration.didkit.api_key) {
+    if api_key.key.eq(&configuration.did.api_key) {
         Some(())
     } else {
         None

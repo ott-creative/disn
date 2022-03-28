@@ -36,11 +36,10 @@ impl DidService {
     pub async fn did_resolve(did: &str) -> Result<String> {
         let configuration = get_configuration().expect("Failed to read configuration.");
 
-        let output = Command::new(configuration.didkit.path)
+        let output = Command::new(format!("{}/didkit", configuration.did.didkit_path))
             .arg("did-resolve")
             .arg(did)
-            .output()
-            .expect("failed to execute process");
+            .output()?;
 
         //println!("stdout: {}", String::from_utf8_lossy(&output.stdout));
         Ok(String::from_utf8_lossy(&output.stdout).to_string())

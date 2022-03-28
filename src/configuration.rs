@@ -9,7 +9,7 @@ pub struct Settings {
     pub database: DatabaseSettings,
     pub server: ServerSettings,
     pub security: SecuritySettings,
-    pub didkit: DidkitSettings,
+    pub did: DidSettings,
 }
 
 #[derive(serde::Deserialize)]
@@ -36,9 +36,10 @@ pub struct SecuritySettings {
 }
 
 #[derive(serde::Deserialize)]
-pub struct DidkitSettings {
-    pub path: String,
+pub struct DidSettings {
+    pub didkit_path: String,
     pub api_key: String,
+    pub vc_issuer_port_start: u16,
 }
 
 impl DatabaseSettings {

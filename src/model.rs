@@ -104,3 +104,33 @@ pub struct CreateDidData {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
+
+#[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
+pub struct VcIssuer {
+    pub did: String,
+    pub service_address: i32,
+    pub status: i32,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+impl VcIssuer {
+    pub const TABLE: &'static str = "vc_issuers";
+}
+
+#[derive(Debug)]
+pub struct CreateVcIssuerData {
+    pub did: String,
+    pub service_address: i32,
+    pub status: i32,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug)]
+pub struct UpdateVcIssuerData {
+    pub did: String,
+    pub service_address: i32,
+    pub status: i32,
+    pub updated_at: DateTime<Utc>,
+}

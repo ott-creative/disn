@@ -4,8 +4,7 @@ use uuid::Uuid;
 use crate::{
     error::Result,
     model::{
-        CreateDidData, CreateUserData, CreateUserVcTpltSelectionData, CreateVcTpltData, Did, User,
-        UserVcTpltSelection, VcTplt,
+        CreateDidData, CreateUserData, CreateVcIssuerData, Did, UpdateVcIssuerData, User, VcIssuer,
     },
 };
 
@@ -45,59 +44,54 @@ impl User {
     }
 }
 
-impl VcTplt {
-    pub async fn find_by_id(id: Uuid, pool: &PgPool) -> Result<VcTplt> {
-        let sql = format!("SELECT * FROM {} WHERE id = $1 LIMIT 1", VcTplt::TABLE);
-        Ok(sqlx::query_as(&sql).bind(id).fetch_one(pool).await?)
+impl VcIssuer {
+    pub async fn find_all(pool: &PgPool) -> Result<Vec<VcIssuer>> {
+        let sql = format!(
+            "SELECT * FROM {} ORDER BY service_address DESC",
+            VcIssuer::TABLE
+        );
+        Ok(sqlx::query_as(&sql).fetch_all(pool).await?)
     }
 
-    pub async fn find_by_name(name: &str, pool: &PgPool) -> Result<VcTplt> {
-        let sql = format!("SELECT * FROM {} WHERE name = $1 LIMIT 1", VcTplt::TABLE);
-        Ok(sqlx::query_as(&sql).bind(name).fetch_one(pool).await?)
+    pub async fn find_by_did(did: &str, pool: &PgPool) -> Result<VcIssuer> {
+        let sql = format!("SELECT * FROM {} WHERE did = $1 LIMIT 1", VcIssuer::TABLE);
+        Ok(sqlx::query_as(&sql).bind(did).fetch_one(pool).await?)
     }
 
-    pub async fn create(data: CreateVcTpltData, pool: &PgPool) -> Result<VcTplt> {
+    pub async fn create(data: CreateVcIssuerData, pool: &PgPool) -> Result<VcIssuer> {
         let sql = format!(
             "
-            INSERT INTO {} (name, purpose, fields, created_at, updated_at)
-            VALUES ($1, $2, $3, $4, $5)
+            INSERT INTO {} (did, service_address, created_at, updated_at)
+            VALUES ($1, $2, $3, $4)
             RETURNING *
             ",
-            VcTplt::TABLE
+            VcIssuer::TABLE
         );
         Ok(sqlx::query_as(&sql)
-            .bind(data.name)
-            .bind(data.purpose)
-            .bind(data.fields)
+            .bind(data.did)
+            .bind(data.service_address)
             .bind(data.created_at)
             .bind(data.updated_at)
             .fetch_one(pool)
             .await?)
     }
-}
 
-impl UserVcTpltSelection {
-    pub async fn find_by_user_id(id: Uuid, pool: &PgPool) -> Result<UserVcTpltSelection> {
-        let sql = format!(
-            "SELECT * FROM {} WHERE user_id = $1 LIMIT 1",
-            UserVcTpltSelection::TABLE
-        );
-        Ok(sqlx::query_as(&sql).bind(id).fetch_one(pool).await?)
-    }
-
-    pub async fn create(data: CreateUserVcTpltSelectionData, pool: &PgPool) -> Result<VcTplt> {
+    pub async fn update(data: UpdateVcIssuerData, pool: &PgPool) -> Result<VcIssuer> {
         let sql = format!(
             "
-            INSERT INTO {} (user_id, tplt_id, created_at, updated_at)
-            VALUES ($1, $2, $3, $4)
+            UPDATE {} SET
+                service_address = $2,
+                status = $3,
+                updated_at = $4
+            WHERE did = $1
             RETURNING *
             ",
-            UserVcTpltSelection::TABLE
+            VcIssuer::TABLE
         );
         Ok(sqlx::query_as(&sql)
-            .bind(data.user_id)
-            .bind(data.tplt_id)
-            .bind(data.created_at)
+            .bind(data.did)
+            .bind(data.service_address)
+            .bind(data.status)
             .bind(data.updated_at)
             .fetch_one(pool)
             .await?)
@@ -123,7 +117,7 @@ impl Did {
             .await?)
     }
 
-    pub async fn find_by_id(id: String, pool: &PgPool) -> Result<Did> {
+    pub async fn find_by_id(id: &str, pool: &PgPool) -> Result<Did> {
         let sql = format!("SELECT * FROM {} WHERE id = $1 LIMIT 1", Did::TABLE);
         Ok(sqlx::query_as(&sql).bind(id).fetch_one(pool).await?)
     }

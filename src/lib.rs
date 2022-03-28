@@ -59,6 +59,7 @@ fn app(pg_pool: PgPool) -> impl Endpoint {
     let ui = api_service.swagger_ui();
     let spec = api_service.spec();
     Route::new()
+        .nest("/health_check", handlers::health_check)
         .nest("/", api_service)
         .nest("/ui", ui)
         .at("/spec", poem::endpoint::make_sync(move |_| spec.clone()))

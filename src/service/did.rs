@@ -45,13 +45,3 @@ impl DidService {
         Ok(String::from_utf8_lossy(&output.stdout).to_string())
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn disn_did_create() {
-        //assert!(DidService::did_create().await.is_ok(), "did create fail!");
-    }
-}

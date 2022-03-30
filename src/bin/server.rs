@@ -1,4 +1,5 @@
 use disn::configuration::get_configuration;
+use disn::service::vc;
 use disn::telemetry::{get_subscriber, init_subscriber};
 use poem::listener::TcpListener;
 use sqlx::postgres::PgPoolOptions;
@@ -14,6 +15,9 @@ async fn main() {
     let pg_pool = PgPoolOptions::new()
         .connect_timeout(std::time::Duration::from_secs(2))
         .connect_lazy_with(configuration.database.with_db());
+
+    // TODO: check restart tasks
+    let _ = vc::CredentialService::vc_issuer_service_restart(&pg_pool).await;
 
     let addr = format!(
         "{}:{}",

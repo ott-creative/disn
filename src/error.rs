@@ -34,6 +34,16 @@ pub enum Error {
     DuplicateVcTpltName,
     #[error("DID generate error")]
     DidGenerateError,
+    #[error("VC Issuer running error")]
+    VcIssuerRunningError,
+    #[error("VC Issuer not running error")]
+    VcIssuerNotRunning,
+    #[error("VC Issue error")]
+    VcIssueError,
+    #[error("VC Verify parser json error")]
+    VcVerifyParserJsonError,
+    #[error("VC Verify error")]
+    VcVerifyError,
 }
 pub type Result<T> = std::result::Result<T, Error>;
 

@@ -27,7 +27,7 @@ mod error;
 mod handlers;
 mod model;
 mod response;
-mod service;
+pub mod service;
 mod sql;
 pub mod telemetry;
 mod utils;

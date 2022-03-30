@@ -82,7 +82,8 @@ impl VcIssuer {
             UPDATE {} SET
                 service_address = $2,
                 status = $3,
-                updated_at = $4
+                pid = $4,
+                updated_at = $5
             WHERE did = $1
             RETURNING *
             ",
@@ -92,6 +93,7 @@ impl VcIssuer {
             .bind(data.did)
             .bind(data.service_address)
             .bind(data.status)
+            .bind(data.pid)
             .bind(data.updated_at)
             .fetch_one(pool)
             .await?)

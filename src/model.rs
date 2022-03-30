@@ -110,6 +110,7 @@ pub struct VcIssuer {
     pub did: String,
     pub service_address: i32,
     pub status: i32,
+    pub pid: Option<i32>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -131,6 +132,7 @@ pub struct CreateVcIssuerData {
 pub struct UpdateVcIssuerData {
     pub did: String,
     pub service_address: i32,
+    pub pid: Option<i32>,
     pub status: i32,
     pub updated_at: DateTime<Utc>,
 }

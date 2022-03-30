@@ -139,7 +139,7 @@ impl CredentialService {
 
     /// get vc issuer by did
     pub async fn vc_issuer_get_by_did(pool: &PgPool, did: &str) -> Result<VcIssuer> {
-        VcIssuer::find_by_did(&format!("did:key:{}", did), pool).await
+        VcIssuer::find_by_did(did, pool).await
     }
 
     /// start vc issuer service

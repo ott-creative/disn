@@ -147,7 +147,7 @@ impl DidApi {
     }
 
     /// Get VC Issuer status
-    #[oai(path = "/vc/issuer/:id/status", method = "get")]
+    #[oai(path = "/vc/issuer/:did/status", method = "get")]
     async fn vc_issuer_status(
         &self,
         pool: Data<&PgPool>,

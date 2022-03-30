@@ -54,8 +54,7 @@ fn app(pg_pool: PgPool) -> impl Endpoint {
         .nest("/api/:v/did", did_api)
         .layer(middleware_stack)*/
     //let server_key = Hmac::<Sha256>::new_from_slice(SERVER_KEY).expect("valid server key");
-    let api_service =
-        OpenApiService::new(api::DidApi, "DID Api", "1.0.0").server("DID Service Server");
+    let api_service = OpenApiService::new(api::DidApi, "DID Api", "1.0.0").server("/");
     let ui = api_service.swagger_ui();
     let spec = api_service.spec();
     Route::new()

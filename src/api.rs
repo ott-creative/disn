@@ -140,7 +140,7 @@ impl DidApi {
         id: Path<String>,
         _auth: MyApiKeyAuthorization,
     ) -> DidResolveResponse {
-        match DidService::did_resolve(&id.0).await {
+        match DidService::did_resolve(&format!("did:key:{}", id.0)).await {
             Ok(doc) => DidResolveResponse::Ok(Json(doc)),
             _ => DidResolveResponse::ResolveFail,
         }
@@ -154,7 +154,7 @@ impl DidApi {
         did: Path<String>,
         _auth: MyApiKeyAuthorization,
     ) -> VcIssuerStatusResponse {
-        match CredentialService::vc_issuer_get_by_did(pool.0, &did.0).await {
+        match CredentialService::vc_issuer_get_by_did(pool.0, &format!("did:key:{}", did.0)).await {
             Ok(vc_issuer) => VcIssuerStatusResponse::Ok(Json(vc_issuer.status.to_string())),
             _ => VcIssuerStatusResponse::QueryFail,
         }
@@ -168,7 +168,7 @@ impl DidApi {
         pool: Data<&PgPool>,
         _auth: MyApiKeyAuthorization,
     ) -> VcIssuerOperateResponse {
-        let did = data.0.did;
+        let did = format!("did:key:{}", data.0.did);
         match data.0.operation {
             VcIssuerOperate::Create => {
                 match CredentialService::vc_issuer_create(pool.0, &did).await {
@@ -207,11 +207,11 @@ impl DidApi {
     ) -> VcIssuerIssueResponse {
         match CredentialService::vc_credential_issue(
             pool.0,
-            &data.0.issuer_did,
+            &format!("did:key:{}", data.0.issuer_did),
             Credentials::AdultProve(CredentialAdultProve {
                 identity: data.0.identity,
-                holder_did: data.0.holder_did,
-                issuer_did: data.0.issuer_did.clone(),
+                holder_did: format!("did:key:{}", data.0.holder_did),
+                issuer_did: format!("did:key:{}", data.0.issuer_did),
                 is_adult: data.0.is_adult,
             }),
         )
@@ -229,10 +229,14 @@ impl DidApi {
         data: Json<VcIssueVerifyData>,
         _auth: MyApiKeyAuthorization,
     ) -> VcIssuerVerifyResponse {
-        match CredentialService::vc_credential_verify(pool.0, &data.0.issuer_did, data.0.credential)
-            .await
+        match CredentialService::vc_credential_verify(
+            pool.0,
+            &format!("did:key:{}", data.0.issuer_did),
+            data.0.credential,
+        )
+        .await
         {
-            Ok(signed) => VcIssuerVerifyResponse::Ok(Json("OK".to_string())),
+            Ok(_signed) => VcIssuerVerifyResponse::Ok(Json("OK".to_string())),
             Err(err) => VcIssuerVerifyResponse::VerifyFail(Json(err.to_string())),
         }
     }

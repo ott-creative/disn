@@ -4,20 +4,10 @@ extern crate lazy_static;
 extern crate serde;
 
 use futures::Future;
-use hyper;
 use sqlx::PgPool;
-use tower::ServiceBuilder;
-use tower_http::{cors::CorsLayer, trace::TraceLayer};
 
-use poem::{
-    error::InternalServerError, listener::TcpListener, middleware::Cors, web::Data, Endpoint,
-    EndpointExt, Result, Route, Server,
-};
-use poem_openapi::{
-    param::Path,
-    payload::{Json, PlainText},
-    ApiResponse, Object, OpenApi, OpenApiService,
-};
+use poem::{listener::TcpListener, middleware::Cors, Endpoint, EndpointExt, Route, Server};
+use poem_openapi::OpenApiService;
 
 mod api;
 pub mod configuration;
@@ -35,25 +25,6 @@ mod utils;
 pub mod constants;
 
 fn app(pg_pool: PgPool) -> impl Endpoint {
-    /*let middleware_stack = ServiceBuilder::new()
-        .layer(TraceLayer::new_for_http())
-        .layer(CorsLayer::permissive())
-        .layer(AddExtensionLayer::new(pg_pool))
-        .into_inner();
-
-    let auth_api = Router::new()
-        .route("/login", post(handlers::user::login))
-        .route("/register", post(handlers::user::register));
-    let vc_api = Router::new().route("/template", post(handlers::vc::vc_tplt_create));
-    let did_api = Router::new().route("/create", post(handlers::did::did_create));
-
-    Router::new()
-        .route("/api/:v/health_check", get(handlers::health_check))
-        .nest("/api/:v/auth", auth_api)
-        .nest("/api/:v/vc", vc_api)
-        .nest("/api/:v/did", did_api)
-        .layer(middleware_stack)*/
-    //let server_key = Hmac::<Sha256>::new_from_slice(SERVER_KEY).expect("valid server key");
     let api_service = OpenApiService::new(api::DidApi, "DID Api", "1.0.0").server("/");
     let ui = api_service.swagger_ui();
     let spec = api_service.spec();
@@ -71,9 +42,5 @@ pub fn server(
     pg_pool: PgPool,
     listener: TcpListener<String>,
 ) -> impl Future<Output = std::result::Result<(), std::io::Error>> {
-    /*axum::Server::from_tcp(listener)
-    .unwrap()
-    .serve(app(pg_pool).into_make_service())*/
-
     Server::new(listener).run(app(pg_pool))
 }

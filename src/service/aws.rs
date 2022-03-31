@@ -1,5 +1,4 @@
-use crate::error::{Error, Result};
-use aws_config::meta::region::RegionProviderChain;
+use crate::error::Result;
 use aws_sdk_s3::Client;
 use aws_sdk_s3::Endpoint;
 use poem::http::Uri;

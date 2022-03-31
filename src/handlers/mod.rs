@@ -1,5 +1,5 @@
 //pub mod did;
-use poem::{handler, http::StatusCode, Result};
+use poem::{handler, http::StatusCode};
 use uuid::Uuid;
 
 #[tracing:: instrument(

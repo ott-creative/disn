@@ -28,64 +28,6 @@ pub struct CreateUserData {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
-pub struct VcTplt {
-    pub id: Uuid,
-    pub name: String,
-    pub purpose: String,
-    pub fields: String, // Dynamic JSON, TODO: check with postgres native json support
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-}
-
-impl VcTplt {
-    pub const TABLE: &'static str = "vc_tplts";
-}
-
-#[derive(Debug)]
-pub struct CreateVcTpltData {
-    pub name: String,
-    pub purpose: String,
-    pub fields: String,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
-pub struct UserVcTpltSelection {
-    pub user_id: Uuid,
-    pub tplt_id: Uuid,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-}
-
-#[derive(Debug)]
-pub struct CreateUserVcTpltSelectionData {
-    pub user_id: Uuid,
-    pub tplt_id: Uuid,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-}
-
-impl UserVcTpltSelection {
-    pub const TABLE: &'static str = "user_vc_tplt_selection";
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
-pub struct VcTpltInstance {
-    pub id: Uuid,
-    pub issuer: Uuid,
-    pub name: String,
-    pub purpose: String,
-    pub fields: String, // Dynamic JSON, TODO: check with postgres native json support
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-}
-
-impl VcTpltInstance {
-    pub const TABLE: &'static str = "vc_tplt_instances";
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
 pub struct Did {
     pub id: String,
     pub jwk: String,

@@ -5,8 +5,7 @@ use crate::service::{
 };
 use poem::{web::Data, Request};
 use poem_openapi::{
-    auth::ApiKey, param::Path, param::Query, payload::Json, ApiResponse, Enum, Object, OpenApi,
-    SecurityScheme,
+    auth::ApiKey, param::Path, payload::Json, ApiResponse, Enum, Object, OpenApi, SecurityScheme,
 };
 use sqlx::PgPool;
 

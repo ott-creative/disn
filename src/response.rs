@@ -30,11 +30,7 @@ Failure:
 }
 */
 use crate::configuration::get_configuration;
-use poem_openapi::{
-    param::Path,
-    payload::{Json, PlainText},
-    ApiResponse, Object, OpenApi, OpenApiService,
-};
+use poem_openapi::Object;
 
 #[derive(Debug, Serialize, Deserialize, Object)]
 pub struct ApiVersion {

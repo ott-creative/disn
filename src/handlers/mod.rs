@@ -1,4 +1,4 @@
-//pub mod did;
+pub mod passbase;
 use poem::{handler, http::StatusCode};
 use uuid::Uuid;
 

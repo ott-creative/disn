@@ -48,7 +48,7 @@ pub enum Error {
 pub type Result<T> = std::result::Result<T, Error>;
 
 pub type ApiError = (StatusCode, Json<Value>);
-pub type ApiResult<T> = std::result::Result<T, ApiError>;
+pub type _ApiResult<T> = std::result::Result<T, ApiError>;
 
 impl From<Error> for ApiError {
     fn from(err: Error) -> Self {

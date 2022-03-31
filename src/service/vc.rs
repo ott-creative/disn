@@ -270,7 +270,6 @@ impl CredentialService {
           }
         });
 
-        println!("body:{:?}", body);
         // Act
         let response = client
             .post(format!(
@@ -324,7 +323,6 @@ impl CredentialService {
           }
         });
 
-        println!("body:{:?}", body);
         // Act
         let response = client
             .post(format!(

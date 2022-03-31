@@ -193,7 +193,6 @@ impl DidApi {
                     Err(err) => VcIssuerOperateResponse::OperateFail(Json(err.to_string())),
                 }
             }
-            _ => VcIssuerOperateResponse::OperateFail(Json("Unknown error".to_string())),
         }
     }
 

@@ -14,7 +14,7 @@ pub struct Claims {
 }
 
 impl Claims {
-    pub fn new(id: Uuid) -> Self {
+    pub fn _new(id: Uuid) -> Self {
         let iat = Utc::now();
         let exp = iat + Duration::hours(24);
 
@@ -26,16 +26,16 @@ impl Claims {
     }
 }
 
-pub fn sign(id: Uuid) -> Result<String> {
+pub fn _sign(id: Uuid) -> Result<String> {
     let configuration = get_configuration().expect("Failed to read configuration.");
     Ok(jsonwebtoken::encode(
         &Header::default(),
-        &Claims::new(id),
+        &Claims::_new(id),
         &EncodingKey::from_secret(configuration.security.jwt_secret.expose_secret().as_bytes()),
     )?)
 }
 
-pub fn verify(token: &str) -> Result<Claims> {
+pub fn _verify(token: &str) -> Result<Claims> {
     let configuration = get_configuration().expect("Failed to read configuration.");
     Ok(jsonwebtoken::decode(
         token,

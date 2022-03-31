@@ -41,7 +41,6 @@ impl DidService {
             .arg(did)
             .output()?;
 
-        //println!("stdout: {}", String::from_utf8_lossy(&output.stdout));
         Ok(String::from_utf8_lossy(&output.stdout).to_string())
     }
 }

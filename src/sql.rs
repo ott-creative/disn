@@ -172,7 +172,10 @@ impl PassbaseIdentity {
             UPDATE {} SET
                 identity = $2,
                 status = $3,
-                updated_at = $4
+                updated_at = $4,
+                is_adult = $5,
+                tx_hash = $6,
+                is_backend_notified = $7
             WHERE id = $1
             RETURNING *
             ",
@@ -183,6 +186,9 @@ impl PassbaseIdentity {
             .bind(data.identity)
             .bind(data.status)
             .bind(data.updated_at)
+            .bind(data.is_adult)
+            .bind(data.tx_hash)
+            .bind(data.is_backend_notified)
             .fetch_one(pool)
             .await?)
     }

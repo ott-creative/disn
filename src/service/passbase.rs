@@ -8,6 +8,7 @@ use crate::{
     },
 };
 use chrono::{Datelike, NaiveDate, Utc};
+use serde_json::json;
 use sqlx::PgPool;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -98,7 +99,7 @@ impl PassbaseService {
         })?;
 
         // TODO remove this test code
-        // identity_res.resources[0].datapoints.date_of_birth = Some("1992-12-09".to_string());
+        identity_res.resources[0].datapoints.date_of_birth = Some("1992-12-09".to_string());
 
         let adult_result = PassbaseService::process_identity_is_adult(&identity_res);
 
@@ -121,7 +122,7 @@ impl PassbaseService {
                     status: identity_res.status,
                     is_adult: adult_result,
                     tx_hash: None,
-                    is_backend_notifed: None,
+                    is_backend_notified: None,
                     created_at: Utc::now(),
                     updated_at: Utc::now(),
                 };
@@ -132,32 +133,52 @@ impl PassbaseService {
         // check if we can issue a vc
         match adult_result {
             Some(is_adult) => {
-                let credential_signed = CredentialService::vc_credential_issue_predefined(
-                    pool,
-                    "ott",
-                    Credential {
-                        issuer_did: " ".to_string(),
-                        holder_did: identity_db.did.clone().unwrap(),
-                        credential: Credentials::AdultProve(CredentialAdultProve {
-                            identity: identity_db.identity.clone(),
-                            is_adult,
-                        }),
-                    },
-                )
-                .await?;
+                let credential = Credential {
+                    issuer_did: " ".to_string(),
+                    holder_did: identity_db.did.clone().unwrap(),
+                    credential: Credentials::AdultProve(CredentialAdultProve {
+                        identity: identity_db.identity.clone(),
+                        is_adult,
+                    }),
+                };
 
-                tracing::info!("passbase credential signed {}", credential_signed);
+                identity_db.is_adult = Some(is_adult);
+
+                let issue_result =
+                    CredentialService::vc_credential_issue_predefined(pool, "ott", credential)
+                        .await?;
+
+                tracing::info!(
+                    "passbase credential signed {}",
+                    issue_result.signed_credential
+                );
                 identity_db.tx_hash = Some(
-                    PassbaseService::chain_submit(&identity_db.identity, credential_signed).await?,
+                    PassbaseService::chain_submit(
+                        &identity_db.identity,
+                        &issue_result.signed_credential,
+                    )
+                    .await?,
                 );
 
                 // notify backend
-                identity_db.is_backend_notifed =
-                    Some(PassbaseService::notify_backend(&identity_db).await?);
+                identity_db.is_backend_notified = Some(
+                    PassbaseService::notify_backend(
+                        &identity_db,
+                        &issue_result.issuer_did,
+                        &issue_result.signed_credential,
+                    )
+                    .await?,
+                );
 
                 // update db
                 identity_db.updated_at = Utc::now();
-                PassbaseIdentity::update(identity_db, pool).await?;
+                let updated = PassbaseIdentity::update(identity_db, pool)
+                    .await
+                    .map_err(|e| {
+                        tracing::error!("passbase identity update error {}", e);
+                        Error::PassbaseIdentityUpdateError
+                    })?;
+                tracing::info!("passbase identity updated {:?}", updated);
             }
             None => {
                 tracing::info!("passbase identity can not judge if adult {}", uid);
@@ -167,13 +188,41 @@ impl PassbaseService {
         Ok(())
     }
 
-    async fn chain_submit(_identity: &str, _signed_credential: String) -> Result<String> {
+    async fn chain_submit(_identity: &str, _signed_credential: &str) -> Result<String> {
         // TODO: chain operation
         Ok("not ready".to_string())
     }
 
-    async fn notify_backend(_passbase_identity: &PassbaseIdentity) -> Result<bool> {
-        // TODO: notify backend
-        Ok(false)
+    async fn notify_backend(
+        passbase_identity: &PassbaseIdentity,
+        issuer_did: &str,
+        credential: &str,
+    ) -> Result<bool> {
+        let settings = get_configuration().expect("Failed to read configuration.");
+        let client = reqwest::Client::new();
+        let data = json!({
+            "issuer_did": issuer_did,
+            "holder_did": passbase_identity.did,
+            "is_adult": passbase_identity.is_adult.unwrap(),
+            "identity": passbase_identity.identity,
+            "status": passbase_identity.status,
+            "credential": credential,
+        });
+
+        tracing::info!("passbase identity notify backend {:?}", data);
+
+        let res = client
+            .post(settings.server.backend_notify_url)
+            .json(&data)
+            .send()
+            .await
+            .map_err(|e| {
+                tracing::error!("passbase identity notify backend error {}", e);
+                Error::PassbaseIdentityNotifyBackendError
+            })?;
+
+        tracing::info!("notify backend result {:?}", res.status());
+
+        Ok(true)
     }
 }

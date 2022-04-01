@@ -90,7 +90,7 @@ pub struct PassbaseIdentity {
     pub status: String,
     pub is_adult: Option<bool>,
     pub tx_hash: Option<String>,
-    pub is_backend_notifed: Option<bool>,
+    pub is_backend_notified: Option<bool>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -106,7 +106,7 @@ pub struct CreatePassbaseIdentity {
     pub status: String,
     pub is_adult: Option<bool>,
     pub tx_hash: Option<String>,
-    pub is_backend_notifed: Option<bool>,
+    pub is_backend_notified: Option<bool>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }

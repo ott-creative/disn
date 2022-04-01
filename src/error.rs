@@ -46,6 +46,10 @@ pub enum Error {
     VcVerifyError,
     #[error("Passbase identity read error")]
     PassbaseIdentityReadError,
+    #[error("Passbase identity notify backend error")]
+    PassbaseIdentityNotifyBackendError,
+    #[error("Passbase identity update db error")]
+    PassbaseIdentityUpdateError,
 }
 pub type Result<T> = std::result::Result<T, Error>;
 

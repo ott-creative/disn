@@ -231,7 +231,7 @@ impl DidApi {
         )
         .await
         {
-            Ok(signed) => VcIssuerIssueResponse::Ok(Json(signed)),
+            Ok(signed) => VcIssuerIssueResponse::Ok(Json(signed.signed_credential)),
             Err(err) => VcIssuerIssueResponse::IssueFail(Json(err.to_string())),
         }
     }

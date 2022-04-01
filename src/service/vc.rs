@@ -24,6 +24,13 @@ pub struct VerifyResult {
     pub errors: Vec<String>,
 }
 
+#[derive(Deserialize)]
+pub struct IssueResult {
+    pub issuer_did: String,
+    pub holder_did: String,
+    pub signed_credential: String,
+}
+
 impl CredentialAdultProve {
     pub fn generate_json(&self, issuer: &str, holder: &str) -> Value {
         json!({
@@ -225,7 +232,7 @@ impl CredentialService {
     }
 
     /// issue credential
-    pub async fn vc_credential_issue(pool: &PgPool, credential: Credential) -> Result<String> {
+    pub async fn vc_credential_issue(pool: &PgPool, credential: Credential) -> Result<IssueResult> {
         // check if this issuer is running
         let issuer = VcIssuer::find_by_did(&credential.issuer_did, &pool).await?;
         if issuer.status != CredentialServiceStatus::Running as i32 {
@@ -274,18 +281,22 @@ impl CredentialService {
                 Error::VcIssueError
             })?;
 
-        Ok(response
-            .text()
-            .await
-            .map_err(|e| {
-                tracing::error!(
-                    "vc issuer {} failed to parse response: {}",
-                    &credential.issuer_did,
-                    e
-                );
-                Error::VcIssueError
-            })?
-            .to_string())
+        Ok(IssueResult {
+            signed_credential: response
+                .text()
+                .await
+                .map_err(|e| {
+                    tracing::error!(
+                        "vc issuer {} failed to parse response: {}",
+                        &credential.issuer_did,
+                        e
+                    );
+                    Error::VcIssueError
+                })?
+                .to_string(),
+            issuer_did: issuer.did,
+            holder_did: credential.holder_did,
+        })
     }
 
     /// verify credential
@@ -395,7 +406,7 @@ impl CredentialService {
         pool: &PgPool,
         issuer_name: &str,
         mut credential: Credential,
-    ) -> Result<String> {
+    ) -> Result<IssueResult> {
         // check if this issuer is running
         let issuer = VcIssuer::find_by_name(issuer_name, &pool).await?;
         if issuer.status != CredentialServiceStatus::Running as i32 {

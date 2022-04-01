@@ -63,5 +63,6 @@ pub fn passbase_hook(pool: Data<&PgPool>, data: Json<HookData>) -> StatusCode {
         let _ = PassbaseService::refresh_identity_status(&pool, &data.0.key).await;
     });
 
+    tracing::info!("passbase webhook return");
     StatusCode::OK
 }

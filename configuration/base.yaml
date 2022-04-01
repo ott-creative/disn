@@ -11,9 +11,5 @@ database:
   require_ssl: false
 security:
   jwt_secret: "please-change-me"
-did:
-  didkit_path: "/Users/chris/dev/ott/repo/disn_src/play"
-  api_key: "FYUX02847GH34583$JFLS928734"
-  vc_issuer_port_start: 5000
-  predefined_issuers: "ott,disn"
+
 

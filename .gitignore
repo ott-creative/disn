@@ -6,6 +6,5 @@ diesel.toml
 # Ignore REST Client files
 *.http
 .DS_Store
-*.yaml
 /configuration/production.yaml
 /configuration/local.yaml

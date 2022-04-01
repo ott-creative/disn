@@ -8,3 +8,4 @@ diesel.toml
 .DS_Store
 *.yaml
 /configuration/production.yaml
+/configuration/local.yaml

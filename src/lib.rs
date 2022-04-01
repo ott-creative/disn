@@ -14,7 +14,7 @@ pub mod configuration;
 mod dto;
 mod error;
 //mod extractors;
-mod handlers;
+pub mod handlers;
 mod model;
 mod response;
 pub mod service;

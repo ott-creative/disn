@@ -10,6 +10,12 @@ pub struct Settings {
     pub server: ServerSettings,
     pub security: SecuritySettings,
     pub did: DidSettings,
+    pub passbase: PassbaseSettings,
+}
+
+#[derive(serde::Deserialize)]
+pub struct PassbaseSettings {
+    pub secret_api_key: String,
 }
 
 #[derive(serde::Deserialize)]
@@ -40,6 +46,7 @@ pub struct DidSettings {
     pub didkit_path: String,
     pub api_key: String,
     pub vc_issuer_port_start: u16,
+    pub predefined_issuers: String,
 }
 
 impl DatabaseSettings {

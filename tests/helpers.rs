@@ -45,6 +45,7 @@ pub async fn spawn_app() -> String {
 async fn prepare_db() -> PgPool {
     let mut configuration = get_configuration().unwrap();
     configuration.database.database_name = Uuid::new_v4().to_string();
+    println!("test db: {}", configuration.database.database_name);
 
     let mut connection = PgConnection::connect_with(&configuration.database.without_db())
         .await

@@ -44,6 +44,8 @@ pub enum Error {
     VcVerifyParserJsonError,
     #[error("VC Verify error")]
     VcVerifyError,
+    #[error("Passbase identity read error")]
+    PassbaseIdentityReadError,
 }
 pub type Result<T> = std::result::Result<T, Error>;
 

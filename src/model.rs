@@ -50,6 +50,7 @@ pub struct CreateDidData {
 #[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
 pub struct VcIssuer {
     pub did: String,
+    pub name: String,
     pub service_address: i32,
     pub status: i32,
     pub pid: Option<i32>,
@@ -64,6 +65,7 @@ impl VcIssuer {
 #[derive(Debug)]
 pub struct CreateVcIssuerData {
     pub did: String,
+    pub name: String,
     pub service_address: i32,
     pub status: i32,
     pub created_at: DateTime<Utc>,
@@ -73,8 +75,38 @@ pub struct CreateVcIssuerData {
 #[derive(Debug)]
 pub struct UpdateVcIssuerData {
     pub did: String,
+    pub name: String,
     pub service_address: i32,
     pub pid: Option<i32>,
     pub status: i32,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
+pub struct PassbaseIdentity {
+    pub id: String,
+    pub did: Option<String>,
+    pub identity: String,
+    pub status: String,
+    pub is_adult: Option<bool>,
+    pub tx_hash: Option<String>,
+    pub is_backend_notifed: Option<bool>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+impl PassbaseIdentity {
+    pub const TABLE: &'static str = "passbase";
+}
+
+pub struct CreatePassbaseIdentity {
+    pub id: String,
+    pub did: Option<String>,
+    pub identity: String,
+    pub status: String,
+    pub is_adult: Option<bool>,
+    pub tx_hash: Option<String>,
+    pub is_backend_notifed: Option<bool>,
+    pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }

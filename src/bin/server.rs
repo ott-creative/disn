@@ -18,6 +18,7 @@ async fn main() {
 
     // TODO: check restart tasks
     let _ = vc::CredentialService::vc_issuer_service_restart(&pg_pool).await;
+    let _ = vc::CredentialService::load_predefined_vc_issuers(&pg_pool).await;
 
     let addr = format!(
         "{}:{}",

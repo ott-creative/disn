@@ -4,7 +4,8 @@ use uuid::Uuid;
 use crate::{
     error::Result,
     model::{
-        CreateDidData, CreateUserData, CreateVcIssuerData, Did, UpdateVcIssuerData, User, VcIssuer,
+        CreateDidData, CreatePassbaseIdentity, CreateUserData, CreateVcIssuerData, Did,
+        PassbaseIdentity, UpdateVcIssuerData, User, VcIssuer,
     },
 };
 
@@ -58,17 +59,36 @@ impl VcIssuer {
         Ok(sqlx::query_as(&sql).bind(did).fetch_one(pool).await?)
     }
 
+    pub async fn find_by_name(name: &str, pool: &PgPool) -> Result<VcIssuer> {
+        let sql = format!("SELECT * FROM {} WHERE name = $1 LIMIT 1", VcIssuer::TABLE);
+        Ok(sqlx::query_as(&sql).bind(name).fetch_one(pool).await?)
+    }
+
+    pub async fn find_by_names(names: Vec<&str>, pool: &PgPool) -> Result<Vec<VcIssuer>> {
+        let sql = format!(
+            "SELECT * FROM {} WHERE name IN ({})",
+            VcIssuer::TABLE,
+            names
+                .iter()
+                .map(|s| format!("'{}'", s))
+                .collect::<Vec<_>>()
+                .join(",")
+        );
+        Ok(sqlx::query_as(&sql).fetch_all(pool).await?)
+    }
+
     pub async fn create(data: CreateVcIssuerData, pool: &PgPool) -> Result<VcIssuer> {
         let sql = format!(
             "
-            INSERT INTO {} (did, service_address, created_at, updated_at)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO {} (did, name, service_address, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5)
             RETURNING *
             ",
             VcIssuer::TABLE
         );
         Ok(sqlx::query_as(&sql)
             .bind(data.did)
+            .bind(data.name)
             .bind(data.service_address)
             .bind(data.created_at)
             .bind(data.updated_at)
@@ -121,6 +141,57 @@ impl Did {
 
     pub async fn find_by_id(id: &str, pool: &PgPool) -> Result<Did> {
         let sql = format!("SELECT * FROM {} WHERE id = $1 LIMIT 1", Did::TABLE);
+        Ok(sqlx::query_as(&sql).bind(id).fetch_one(pool).await?)
+    }
+}
+
+impl PassbaseIdentity {
+    pub async fn create(data: CreatePassbaseIdentity, pool: &PgPool) -> Result<PassbaseIdentity> {
+        let sql = format!(
+            "
+            INSERT INTO {} (id, did, identity, status, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            RETURNING *
+            ",
+            PassbaseIdentity::TABLE
+        );
+        Ok(sqlx::query_as(&sql)
+            .bind(data.id)
+            .bind(data.did)
+            .bind(data.identity)
+            .bind(data.status)
+            .bind(data.created_at)
+            .bind(data.updated_at)
+            .fetch_one(pool)
+            .await?)
+    }
+
+    pub async fn update(data: PassbaseIdentity, pool: &PgPool) -> Result<PassbaseIdentity> {
+        let sql = format!(
+            "
+            UPDATE {} SET
+                identity = $2,
+                status = $3,
+                updated_at = $4
+            WHERE id = $1
+            RETURNING *
+            ",
+            PassbaseIdentity::TABLE
+        );
+        Ok(sqlx::query_as(&sql)
+            .bind(data.id)
+            .bind(data.identity)
+            .bind(data.status)
+            .bind(data.updated_at)
+            .fetch_one(pool)
+            .await?)
+    }
+
+    pub async fn find_by_id(id: &str, pool: &PgPool) -> Result<PassbaseIdentity> {
+        let sql = format!(
+            "SELECT * FROM {} WHERE id = $1 LIMIT 1",
+            PassbaseIdentity::TABLE
+        );
         Ok(sqlx::query_as(&sql).bind(id).fetch_one(pool).await?)
     }
 }

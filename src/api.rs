@@ -1,7 +1,7 @@
 use crate::configuration::get_configuration;
 use crate::service::{
     did::DidService,
-    vc::{CredentialAdultProve, CredentialService, Credentials},
+    vc::{Credential, CredentialAdultProve, CredentialService, Credentials},
 };
 use poem::{web::Data, Request};
 use poem_openapi::{
@@ -90,7 +90,6 @@ enum VcIssuerVerifyResponse {
 
 #[derive(Enum, Debug)]
 enum VcIssuerOperate {
-    Create,
     Run,
     Restart,
     Disable,
@@ -100,6 +99,12 @@ enum VcIssuerOperate {
 struct VcIssuerOperateData {
     did: String,
     operation: VcIssuerOperate,
+}
+
+#[derive(Object)]
+struct VcIssuerCreateData {
+    did: String,
+    name: String,
 }
 
 #[derive(Object)]
@@ -159,8 +164,23 @@ impl DidApi {
         }
     }
 
-    /// Operate VC issuer create/run/disable
-    #[oai(path = "/vc/issuer", method = "post")]
+    /// Create VC issuer
+    #[oai(path = "/vc/issuer/create", method = "post")]
+    async fn vc_issuer_create(
+        &self,
+        data: Json<VcIssuerCreateData>,
+        pool: Data<&PgPool>,
+        _auth: MyApiKeyAuthorization,
+    ) -> VcIssuerOperateResponse {
+        let did = format!("did:key:{}", data.0.did);
+        match CredentialService::vc_issuer_create(pool.0, &did, &data.0.name).await {
+            Ok(()) => VcIssuerOperateResponse::Ok(Json("OK".to_string())),
+            Err(err) => VcIssuerOperateResponse::OperateFail(Json(err.to_string())),
+        }
+    }
+
+    /// Operate VC issuer Run/Restart/Disable
+    #[oai(path = "/vc/issuer/operate", method = "post")]
     async fn vc_issuer_operate(
         &self,
         data: Json<VcIssuerOperateData>,
@@ -169,12 +189,6 @@ impl DidApi {
     ) -> VcIssuerOperateResponse {
         let did = format!("did:key:{}", data.0.did);
         match data.0.operation {
-            VcIssuerOperate::Create => {
-                match CredentialService::vc_issuer_create(pool.0, &did).await {
-                    Ok(()) => VcIssuerOperateResponse::Ok(Json("OK".to_string())),
-                    Err(err) => VcIssuerOperateResponse::OperateFail(Json(err.to_string())),
-                }
-            }
             VcIssuerOperate::Run => {
                 match CredentialService::vc_issuer_service_run(pool.0, &did, false).await {
                     Ok(()) => VcIssuerOperateResponse::Ok(Json("OK".to_string())),
@@ -205,13 +219,15 @@ impl DidApi {
     ) -> VcIssuerIssueResponse {
         match CredentialService::vc_credential_issue(
             pool.0,
-            &format!("did:key:{}", data.0.issuer_did),
-            Credentials::AdultProve(CredentialAdultProve {
-                identity: data.0.identity,
+            Credential {
                 holder_did: format!("did:key:{}", data.0.holder_did),
                 issuer_did: format!("did:key:{}", data.0.issuer_did),
-                is_adult: data.0.is_adult,
-            }),
+
+                credential: Credentials::AdultProve(CredentialAdultProve {
+                    identity: data.0.identity,
+                    is_adult: data.0.is_adult,
+                }),
+            },
         )
         .await
         {

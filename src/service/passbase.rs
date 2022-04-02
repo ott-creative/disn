@@ -99,7 +99,7 @@ impl PassbaseService {
         })?;
 
         // TODO remove this test code
-        identity_res.resources[0].datapoints.date_of_birth = Some("1992-12-09".to_string());
+        // identity_res.resources[0].datapoints.date_of_birth = Some("1992-12-09".to_string());
 
         let adult_result = PassbaseService::process_identity_is_adult(&identity_res);
 

@@ -165,11 +165,11 @@ mod tests {
   #[tokio::test]
   async fn send_and_query_tx() {
     let email = String::from("test@163.com");
-    let data = String::from("xxxx");
+    let data = uuid::Uuid::new_v4().to_string();
     let _tx_hash = ChainService::send_tx(&email, &data).await.unwrap();
     std::thread::sleep(std::time::Duration::from_secs(10));
     let contract = ChainService::contract().unwrap();
-    let result: String = contract.query("getEvidence", (email), None, Options::default(), None).await.unwrap();
+    let result: String = contract.query("getEvidence", email, None, Options::default(), None).await.unwrap();
     assert_eq!(result, data);
   }
 }

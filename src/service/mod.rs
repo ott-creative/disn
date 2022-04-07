@@ -3,3 +3,4 @@ pub mod did;
 pub mod passbase;
 pub mod user;
 pub mod vc;
+pub mod chain;

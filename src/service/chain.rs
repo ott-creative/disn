@@ -6,6 +6,7 @@ use std::str::FromStr;
 use std::{fs, io::Read};
 use web3::{
     contract::{Contract, Options},
+    contract::tokens::Tokenize,
     transports::Http,
     types::Address,
 };
@@ -13,15 +14,15 @@ use web3::{
 pub struct ChainService;
 
 impl ChainService {
-    pub async fn send_tx(contract: &str, email: &str, data: &str) -> Result<String> {
+    pub async fn send_tx(contract: &str, func: &str, params: impl Tokenize) -> Result<String> {
         let settings = get_configuration().expect("Failed to get configuration");
         let prvk = SecretKey::from_str(settings.chain.controller_private_key.expose_secret())
             .expect("Failed to parse private key");
         let contract = Self::contract(&settings.chain, contract)?;
         let tx_hash = contract
             .signed_call(
-                "saveEvidence",
-                (email.to_owned(), data.to_owned()),
+                func,
+                params,
                 Options::default(),
                 &prvk,
             )
@@ -65,7 +66,7 @@ mod tests {
 
         let data = uuid::Uuid::new_v4().to_string();
         let email = format!("{}@example.com", &data);
-        let _tx_hash = ChainService::send_tx(&contract_name, &email, &data)
+        let _tx_hash = ChainService::send_tx(&contract_name, "saveEvidence", (email.clone(), data.clone()))
             .await
             .unwrap();
         std::thread::sleep(std::time::Duration::from_secs(10));

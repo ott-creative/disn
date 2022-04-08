@@ -12,6 +12,7 @@ bcrypt = "0.10"
 chrono = { version = "0.4", features = ["serde"] }
 config = "0.11"
 dotenv = "0.15"
+ethabi = "16.0.0"
 futures = "0.3.19"
 headers = "0.3"
 hmac = "0.11"

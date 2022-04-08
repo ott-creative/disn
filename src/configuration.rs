@@ -11,6 +11,7 @@ pub struct Settings {
     pub security: SecuritySettings,
     pub did: DidSettings,
     pub passbase: PassbaseSettings,
+    pub chain: ChainSettings,
 }
 
 #[derive(serde::Deserialize)]
@@ -48,6 +49,29 @@ pub struct DidSettings {
     pub api_key: String,
     pub vc_issuer_port_start: u16,
     pub predefined_issuers: String,
+}
+
+#[derive(serde::Deserialize)]
+pub struct ContractMeta {
+    pub name: String,
+    pub address: String,
+}
+
+#[derive(serde::Deserialize)]
+pub struct ChainSettings {
+    pub controller_private_key: Secret<String>,
+    pub contract_abi_path: String,
+    pub provider: String,
+    pub contracts: Vec<ContractMeta>,
+}
+
+impl ChainSettings {
+    pub fn get_contract_address(&self, name: &str) -> Option<&str> {
+        self.contracts
+            .iter()
+            .find(|c| c.name == name)
+            .map(|c| c.address.as_str())
+    }
 }
 
 impl DatabaseSettings {

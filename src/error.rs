@@ -20,6 +20,10 @@ pub enum Error {
     SsiDidJwkGenerationError(#[from] ssi::error::Error),
     #[error(transparent)]
     CommandError(#[from] io::Error),
+    #[error(transparent)]
+    Web3Error(#[from] web3::Error),
+    #[error(transparent)]
+    EthAbiError(#[from] ethabi::Error),
     //#[error(transparent)]
     //PoemError(#[from] poem::Error),
     #[error("wrong credentials")]

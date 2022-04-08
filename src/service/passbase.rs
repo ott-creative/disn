@@ -93,7 +93,7 @@ impl PassbaseService {
                 Error::PassbaseIdentityReadError
             })?;
 
-        let mut identity_res = response.json::<IdentityResponse>().await.map_err(|e| {
+        let identity_res = response.json::<IdentityResponse>().await.map_err(|e| {
             tracing::error!("passbase identity decode response fail {} {}", uid, e);
             Error::PassbaseIdentityReadError
         })?;

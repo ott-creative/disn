@@ -2,6 +2,7 @@ api_version: "v1"
 server:
   host: "0.0.0.0"
   port: 3000
+  backend_notify_url: ""
 database:
   host: "127.0.0.1"
   port: 5432
@@ -11,5 +12,19 @@ database:
   require_ssl: false
 security:
   jwt_secret: "please-change-me"
-
+passbase:
+  secret_api_key: ""
+did:
+  didkit_path: "/Users/chris/dev/ott/repo/disn_src/play"
+  api_key: "TYDF02847YU89583$JFLS989012"
+  vc_issuer_port_start: 5000
+  predefined_issuers: "ott,disn"
+chain:
+  controller_private_key: ""
+  contract_abi_path: "chain/contract"
+  contracts:
+    -
+      name: "identity"
+      address: "0xA3211777B08D672f190aD4aA06172f2EA4350EB9"
+  provider: ""
 

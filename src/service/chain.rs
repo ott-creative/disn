@@ -30,7 +30,7 @@ impl ChainService {
                 &prvk,
             )
             .await?;
-        let tx_hash = tx_hash.to_string();
+        let tx_hash = format!("{:#x}", tx_hash);
         TxRecord::create(tx_hash.clone(), pool).await?;
         Ok(tx_hash)
     }

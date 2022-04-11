@@ -18,6 +18,18 @@ impl User {
     pub const TABLE: &'static str = "users";
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
+pub struct TxRecord {
+    pub tx_hash: String,
+    pub send_status: i32,
+    pub block_number: Option<i32>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+impl TxRecord {
+    pub const TABLE: &'static str = "tx_records";
+}
 #[derive(Debug)]
 pub struct CreateUserData {
     pub name: String,

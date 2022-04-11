@@ -1,13 +1,33 @@
 use sqlx::PgPool;
 use uuid::Uuid;
+use chrono::Utc;
 
 use crate::{
     error::Result,
     model::{
         CreateDidData, CreatePassbaseIdentity, CreateUserData, CreateVcIssuerData, Did,
-        PassbaseIdentity, UpdateVcIssuerData, User, VcIssuer,
+        PassbaseIdentity, UpdateVcIssuerData, User, VcIssuer, TxRecord,
     },
 };
+
+impl TxRecord {
+    pub async fn create(tx_hash: String, pool: &PgPool) -> Result<TxRecord> {
+        let sql = format!(
+            "
+            INSERT INTO {} (tx_hash, created_at, updated_at)
+            VALUES ($1, $2, $3)
+            RETURNING *
+            ",
+            TxRecord::TABLE
+        );
+        Ok(sqlx::query_as(&sql)
+            .bind(tx_hash)
+            .bind(Utc::now())
+            .bind(Utc::now())
+            .fetch_one(pool)
+            .await?)
+    }
+}
 
 impl User {
     pub async fn find_by_id(id: Uuid, pool: &PgPool) -> Result<User> {

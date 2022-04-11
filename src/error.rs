@@ -24,6 +24,8 @@ pub enum Error {
     Web3Error(#[from] web3::Error),
     #[error(transparent)]
     EthAbiError(#[from] ethabi::Error),
+    #[error(transparent)]
+    MpscSendError(#[from] std::sync::mpsc::SendError<String>),
     //#[error(transparent)]
     //PoemError(#[from] poem::Error),
     #[error("wrong credentials")]

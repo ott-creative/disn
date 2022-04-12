@@ -3,6 +3,7 @@ use poem::{http::StatusCode, web::Json};
 use serde_json::{json, Value};
 use std::io;
 use thiserror::Error;
+use sqlx::PgPool;
 
 #[derive(Debug, Error)]
 pub enum Error {
@@ -25,7 +26,7 @@ pub enum Error {
     #[error(transparent)]
     EthAbiError(#[from] ethabi::Error),
     #[error(transparent)]
-    MpscSendError(#[from] std::sync::mpsc::SendError<String>),
+    MpscSendError(#[from] std::sync::mpsc::SendError<(String, PgPool)>),
     //#[error(transparent)]
     //PoemError(#[from] poem::Error),
     #[error("wrong credentials")]

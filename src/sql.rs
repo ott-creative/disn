@@ -11,7 +11,7 @@ use crate::{
 };
 
 impl TxRecord {
-    pub async fn create(tx_hash: String, pool: &PgPool) -> Result<TxRecord> {
+    pub async fn create(tx_hash: String, pool: PgPool) -> Result<TxRecord> {
         let sql = format!(
             "
             INSERT INTO {} (tx_hash, created_at, updated_at)
@@ -24,9 +24,36 @@ impl TxRecord {
             .bind(tx_hash)
             .bind(Utc::now())
             .bind(Utc::now())
-            .fetch_one(pool)
+            .fetch_one(&pool)
             .await?)
     }
+
+    pub async fn find_by_send_status(send_status: i32, pool: PgPool) -> Result<Vec<TxRecord>> {
+        let sql = format!(
+            "SELECT * FROM {} WHERE send_status = {}",
+            TxRecord::TABLE,
+            send_status
+        );
+        Ok(sqlx::query_as(&sql).fetch_all(&pool).await?)
+    }
+
+    pub async fn update_send_status(tx_hash: String, send_status: i32, pool: PgPool) -> Result<TxRecord> {
+        let sql = format!(
+            "
+            UPDATE {} SET
+                send_status = $2,
+            WHERE tx_hash = $1
+            RETURNING *
+            ",
+            TxRecord::TABLE
+        );
+        Ok(sqlx::query_as(&sql)
+            .bind(tx_hash)
+            .bind(send_status)
+            .fetch_one(&pool)
+            .await?)
+    }
+
 }
 
 impl User {

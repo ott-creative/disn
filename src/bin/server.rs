@@ -1,15 +1,28 @@
 use disn::configuration::get_configuration;
-use disn::service::vc;
 use disn::service::chain;
+use disn::service::vc;
 use disn::telemetry::{get_subscriber, init_subscriber};
 use poem::listener::TcpListener;
 use sqlx::postgres::PgPoolOptions;
 
+use tracing::{info, Level};
+use tracing_subscriber::FmtSubscriber;
+
 #[tokio::main]
 async fn main() {
     dotenv::dotenv().ok();
-    let subscriber = get_subscriber("disn".into(), "info".into(), std::io::stdout);
-    init_subscriber(subscriber);
+    //let subscriber = get_subscriber("disn".into(), "info".into(), std::io::stdout);
+    //init_subscriber(subscriber);
+
+    // a builder for `FmtSubscriber`.
+    let subscriber = FmtSubscriber::builder()
+        // all spans/events with a level higher than TRACE (e.g, debug, info, warn, etc.)
+        // will be written to stdout.
+        .with_max_level(Level::TRACE)
+        // completes the builder.
+        .finish();
+
+    tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
 
     let configuration = get_configuration().expect("Failed to read configuration.");
 

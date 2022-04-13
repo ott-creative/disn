@@ -41,15 +41,17 @@ impl TxRecord {
         let sql = format!(
             "
             UPDATE {} SET
-                send_status = $2,
-            WHERE tx_hash = $1
+                send_status = $1,
+                updated_at = $2,
+            WHERE tx_hash = $3
             RETURNING *
             ",
             TxRecord::TABLE
         );
         Ok(sqlx::query_as(&sql)
-            .bind(tx_hash)
             .bind(send_status)
+            .bind(Utc::now())
+            .bind(tx_hash)
             .fetch_one(&pool)
             .await?)
     }

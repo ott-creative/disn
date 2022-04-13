@@ -26,7 +26,7 @@ pub enum Error {
     #[error(transparent)]
     EthAbiError(#[from] ethabi::Error),
     #[error(transparent)]
-    MpscSendError(#[from] std::sync::mpsc::SendError<(String, PgPool)>),
+    MpscSendError(#[from] tokio::sync::mpsc::error::SendError<(String, PgPool)>),
     //#[error(transparent)]
     //PoemError(#[from] poem::Error),
     #[error("wrong credentials")]

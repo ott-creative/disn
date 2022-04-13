@@ -14,9 +14,9 @@ use web3::{
     types::Address,
     Transport
 };
-use std::sync::mpsc::{Sender, Receiver};
+use tokio::sync::mpsc::{Sender, Receiver};
 use std::thread;
-use std::sync::mpsc;
+use tokio::sync::mpsc;
 use std::time::Duration;
 use sqlx::PgPool;
 use crate::model::TxRecord;
@@ -44,20 +44,26 @@ impl ChainService {
             )
             .await?;
         let tx_hash = format!("{:#x}", tx_hash);
-        self.tx.send((tx_hash.clone(), self.pool.clone()))?;
+        self.tx.send((tx_hash.clone(), self.pool.clone())).await?;
         TxRecord::create(tx_hash.clone(), self.pool.clone()).await?;
         Ok(tx_hash)
     }
 
     pub async fn run_confirm_server(pool: PgPool) -> ChainService {
-        let (tx, rx): (Sender<(String, PgPool)>, Receiver<(String, PgPool)>) = mpsc::channel();
+        let (tx, mut rx): (Sender<(String, PgPool)>, Receiver<(String, PgPool)>) = mpsc::channel(100);
         let (web3, settings) = Self::web3_config();
         let confirm_server = ChainService{ pool, tx, settings: settings , web3};
-        thread::spawn(move || loop {
-            let (tx_hash, pgpool) = rx.recv().unwrap();
-            let rt = tokio::runtime::Runtime::new().unwrap();
-            rt.spawn(async move {
-                ChainService::confirm_tx(pgpool, tx_hash).await;
+        thread::spawn(move || {
+            let rt = tokio::runtime::Builder::new_current_thread()
+                .thread_name("confirm-tx").enable_all().build().unwrap();
+            rt.block_on(async move {
+                loop {
+                    if let Some((tx_hash, pgpool)) = rx.recv().await {
+                        tokio::spawn(async move {
+                            ChainService::confirm_tx(pgpool, tx_hash).await;
+                        });
+                    };
+                }
             });
         });
         confirm_server.confirm_pending_txs().await;
@@ -65,10 +71,11 @@ impl ChainService {
     }
 
     async fn confirm_pending_txs(&self) {
-        let records = TxRecord::find_by_send_status(0, self.pool.clone()).await.unwrap();
-        records.into_iter().for_each(|record|  {
-            self.tx.send((record.tx_hash, self.pool.clone())).unwrap();
-        });
+        let mut records = TxRecord::find_by_send_status(0, self.pool.clone())
+                .await.unwrap().into_iter();
+        while let Some(record) = records.next() {
+            self.tx.send((record.tx_hash, self.pool.clone())).await.unwrap();
+        }
     }
 
     #[async_recursion]

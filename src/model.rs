@@ -22,7 +22,7 @@ impl User {
 pub struct TxRecord {
     pub tx_hash: String,
     pub send_status: i32,
-    pub block_number: Option<i32>,
+    pub block_number: Option<i64>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }

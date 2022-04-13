@@ -22,6 +22,7 @@ use sqlx::PgPool;
 use crate::model::TxRecord;
 use tokio::time::{sleep, Duration as TokioDuration};
 use async_recursion::async_recursion;
+// use web3::types::U64;
 
 pub struct ChainService {
     pool: PgPool,
@@ -86,23 +87,27 @@ impl ChainService {
         let confirmation_check = || Self::tx_receipt_check(&eth, tx_hash_256);
         let result = web3.wait_for_confirmations(poll_interval, 0, confirmation_check).await;
         if result.is_err() {
-            Self::retry_confirm(pool.clone(), tx_hash.clone()).await;
+            Self::retry_confirm(&pool, tx_hash.clone()).await;
         }
         let receipt_result = eth.transaction_receipt(tx_hash_256).await;
-        let mut send_status: i32 = 1;
+        let mut send_status: i32 = -1;
+        let mut block_number: Option<i64> = None;
         if let Ok(Some(receipt)) = receipt_result {
-            if receipt.status == Some(0.into()) {
-                send_status = -1;
+            if receipt.status == Some(1u64.into()) {
+                send_status = 1;
+                if let Some (read_block_number) = receipt.block_number {
+                    block_number = Some(read_block_number.low_u64() as i64);
+                }
             }
         } else {
-            Self::retry_confirm(pool.clone(), tx_hash.clone()).await;
+            Self::retry_confirm(&pool, tx_hash.clone()).await;
         };
-        TxRecord::update_send_status(tx_hash, send_status, pool).await.unwrap();
+        TxRecord::update_send_status(tx_hash, send_status, block_number, pool).await.unwrap();
     }
 
-    async fn retry_confirm(pool: PgPool, tx_hash: String) {
+    async fn retry_confirm(pool: &PgPool, tx_hash: String) {
         sleep(TokioDuration::from_secs(10)).await;
-        Self::confirm_tx(pool, tx_hash).await;
+        Self::confirm_tx(pool.clone(), tx_hash).await;
     }
 
     async fn tx_receipt_check<T: Transport>(eth: &Eth<T>, hash: H256) -> error::Result<Option<U64>> {
@@ -153,12 +158,12 @@ mod tests {
         let configuration = get_configuration().expect("Failed to read configuration.");
         let pg_pool = PgPoolOptions::new()
         .connect_timeout(std::time::Duration::from_secs(2))
-        .connect_lazy_with(configuration.database.with_db());
+        .connect_with(configuration.database.with_db()).await.unwrap();
         let server = ChainService::run_confirm_server(pg_pool).await;
         let _tx_hash = server.send_tx(&contract_name, "saveEvidence", (email.clone(), data.clone()))
             .await
             .unwrap();
-        std::thread::sleep(std::time::Duration::from_secs(60));
+        std::thread::sleep(std::time::Duration::from_secs(10));
         let contract = server.contract(&contract_name).unwrap();
         let result: String = contract
             .query("getEvidence", email, None, Options::default(), None)

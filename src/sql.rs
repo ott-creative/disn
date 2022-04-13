@@ -37,21 +37,23 @@ impl TxRecord {
         Ok(sqlx::query_as(&sql).fetch_all(&pool).await?)
     }
 
-    pub async fn update_send_status(tx_hash: String, send_status: i32, pool: PgPool) -> Result<TxRecord> {
+    pub async fn update_send_status(tx_hash: String, send_status: i32, block_number: Option<i64>, pool: PgPool) -> Result<TxRecord> {
         let sql = format!(
             "
             UPDATE {} SET
-                send_status = $1,
-                updated_at = $2,
-            WHERE tx_hash = $3
+                send_status = $2,
+                block_number = $3,
+                updated_at = $4
+            WHERE tx_hash = $1
             RETURNING *
             ",
             TxRecord::TABLE
         );
         Ok(sqlx::query_as(&sql)
-            .bind(send_status)
-            .bind(Utc::now())
             .bind(tx_hash)
+            .bind(send_status)
+            .bind(block_number)
+            .bind(Utc::now())
             .fetch_one(&pool)
             .await?)
     }

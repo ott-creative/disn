@@ -53,9 +53,8 @@ impl ChainService {
         let (tx, mut rx): (Sender<(String, PgPool)>, Receiver<(String, PgPool)>) = mpsc::channel(100);
         let (web3, settings) = Self::web3_config();
         let confirm_server = ChainService{ pool, tx, settings: settings , web3};
-        thread::spawn(move || {
-            let rt = tokio::runtime::Builder::new_current_thread()
-                .thread_name("confirm-tx").enable_all().build().unwrap();
+        thread::Builder::new().name("confirm-tx".to_string()).spawn(move || {
+            let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
             rt.block_on(async move {
                 loop {
                     if let Some((tx_hash, pgpool)) = rx.recv().await {
@@ -65,7 +64,7 @@ impl ChainService {
                     };
                 }
             });
-        });
+        }).unwrap();
         confirm_server.confirm_pending_txs().await;
         confirm_server
     }

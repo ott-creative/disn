@@ -10,6 +10,9 @@ use sqlx::PgPool;
 use std::{collections::HashMap, process::Command};
 use uuid::Uuid;
 
+use did_method_key::DIDKey;
+use didkit::{LinkedDataProofOptions, VerifiableCredential, JWK};
+
 pub struct CredentialService;
 
 pub struct CredentialAdultProve {
@@ -299,6 +302,44 @@ impl CredentialService {
         })
     }
 
+    //. issue credential with lib access
+    pub async fn vc_credential_issue_with_lib(
+        pool: &PgPool,
+        credential: Credential,
+    ) -> Result<IssueResult> {
+        // check if this issuer is running
+        // TODO: join query
+        let issuer = VcIssuer::find_by_did(&credential.issuer_did, &pool).await?;
+        let issuer_did = Did::find_by_id(&issuer.did, pool).await?;
+
+        let credential_unsigned;
+        match credential.credential {
+            Credentials::AdultProve(adult_prove) => {
+                //credential_unsigned = adult_prove.generate_unsigned();
+                credential_unsigned =
+                    adult_prove.generate_json(&issuer.did, &credential.holder_did);
+                tracing::info!("credential unsigned:{}", credential_unsigned);
+            }
+        }
+
+        let key: JWK = serde_json::from_str(&issuer_did.jwk)?;
+        let mut verifiable_credential: VerifiableCredential =
+            serde_json::from_value(credential_unsigned)?;
+        let proof = verifiable_credential
+            .generate_proof(&key, &LinkedDataProofOptions::default(), &DIDKey)
+            .await?;
+
+        verifiable_credential.add_proof(proof);
+
+        let signed_credential = serde_json::to_vec(&verifiable_credential)?;
+
+        Ok(IssueResult {
+            signed_credential: String::from_utf8(signed_credential)?,
+            issuer_did: issuer.did,
+            holder_did: credential.holder_did,
+        })
+    }
+
     /// verify credential
     pub async fn vc_credential_verify(
         pool: &PgPool,
@@ -356,6 +397,36 @@ impl CredentialService {
                 "vc issuer {} failed to verify credential: {:?}",
                 issuer_did,
                 vr.errors
+            );
+            return Err(Error::VcVerifyError);
+        } else {
+            tracing::info!("vc issuer {} verified credential", issuer_did);
+            return Ok(true);
+        }
+    }
+
+    pub async fn vc_credential_verify_with_lib(
+        pool: &PgPool,
+        issuer_did: &str,
+        signed_credential: String,
+    ) -> Result<bool> {
+        let _issuer = VcIssuer::find_by_did(issuer_did, &pool).await?;
+        let credential: Value = serde_json::from_str(&signed_credential).map_err(|e| {
+            tracing::error!("vc verify {} failed to parse credential: {}", issuer_did, e);
+            Error::VcVerifyParserJsonError
+        })?;
+
+        let verifiable_credential: VerifiableCredential = serde_json::from_value(credential)?;
+
+        let result = verifiable_credential
+            .verify(Some(LinkedDataProofOptions::default()), &DIDKey)
+            .await;
+
+        if result.errors.len() > 0 {
+            tracing::error!(
+                "vc issuer {} failed to verify credential: {:?}",
+                issuer_did,
+                result.errors
             );
             return Err(Error::VcVerifyError);
         } else {

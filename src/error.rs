@@ -1,9 +1,10 @@
 use crate::response::{ApiFailure, Failure};
 use poem::{http::StatusCode, web::Json};
+use serde_json::Error as SerdeJsonError;
 use serde_json::{json, Value};
+use sqlx::PgPool;
 use std::io;
 use thiserror::Error;
-use sqlx::PgPool;
 
 #[derive(Debug, Error)]
 pub enum Error {
@@ -27,6 +28,10 @@ pub enum Error {
     EthAbiError(#[from] ethabi::Error),
     #[error(transparent)]
     MpscSendError(#[from] tokio::sync::mpsc::error::SendError<(String, PgPool)>),
+    #[error(transparent)]
+    SerdeJsonError(#[from] SerdeJsonError),
+    #[error(transparent)]
+    StringConvertUtf8Error(#[from] std::string::FromUtf8Error),
     //#[error(transparent)]
     //PoemError(#[from] poem::Error),
     #[error("wrong credentials")]

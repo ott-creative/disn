@@ -217,7 +217,7 @@ impl DidApi {
         data: Json<VcIssueAdultProveData>,
         _auth: MyApiKeyAuthorization,
     ) -> VcIssuerIssueResponse {
-        match CredentialService::vc_credential_issue(
+        match CredentialService::vc_credential_issue_with_lib(
             pool.0,
             Credential {
                 holder_did: format!("did:key:{}", data.0.holder_did),
@@ -243,7 +243,7 @@ impl DidApi {
         data: Json<VcIssueVerifyData>,
         _auth: MyApiKeyAuthorization,
     ) -> VcIssuerVerifyResponse {
-        match CredentialService::vc_credential_verify(
+        match CredentialService::vc_credential_verify_with_lib(
             pool.0,
             &format!("did:key:{}", data.0.issuer_did),
             data.0.credential,

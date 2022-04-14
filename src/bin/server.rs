@@ -30,9 +30,9 @@ async fn main() {
         .connect_timeout(std::time::Duration::from_secs(2))
         .connect_lazy_with(configuration.database.with_db());
 
-    // TODO: check restart tasks
-    let _ = vc::CredentialService::vc_issuer_service_restart(&pg_pool).await;
-    let _ = vc::CredentialService::load_predefined_vc_issuers(&pg_pool).await;
+    // disable
+    // let _ = vc::CredentialService::vc_issuer_service_restart(&pg_pool).await;
+    // let _ = vc::CredentialService::load_predefined_vc_issuers(&pg_pool).await;
     let confirm_server = chain::ChainService::run_confirm_server(pg_pool.clone()).await;
     let addr = format!(
         "{}:{}",

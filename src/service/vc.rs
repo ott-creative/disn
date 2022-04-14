@@ -451,7 +451,7 @@ impl CredentialService {
             Ok(issuers) => {
                 // start issuers
                 for issuer in issuers {
-                    CredentialService::vc_issuer_service_run(&pool, &issuer.did, false).await?;
+                    // CredentialService::vc_issuer_service_run(&pool, &issuer.did, false).await?;
                     hashed.remove(&issuer.name);
                 }
             }
@@ -466,7 +466,7 @@ impl CredentialService {
             tracing::info!("try to create issuer: {}", name);
             let did = DidService::did_create(pool).await?;
             CredentialService::vc_issuer_create(pool, &did, name).await?;
-            CredentialService::vc_issuer_service_run(pool, &did, true).await?;
+            // CredentialService::vc_issuer_service_run(pool, &did, true).await?;
         }
 
         Ok(())

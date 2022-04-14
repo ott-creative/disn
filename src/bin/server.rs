@@ -5,7 +5,7 @@ use disn::telemetry::{get_subscriber, init_subscriber};
 use poem::listener::TcpListener;
 use sqlx::postgres::PgPoolOptions;
 
-use tracing::{info, Level};
+use tracing::Level;
 use tracing_subscriber::FmtSubscriber;
 
 #[tokio::main]
@@ -32,7 +32,7 @@ async fn main() {
 
     // disable
     // let _ = vc::CredentialService::vc_issuer_service_restart(&pg_pool).await;
-    // let _ = vc::CredentialService::load_predefined_vc_issuers(&pg_pool).await;
+    let _ = vc::CredentialService::load_predefined_vc_issuers(&pg_pool).await;
     let confirm_server = chain::ChainService::run_confirm_server(pg_pool.clone()).await;
     let addr = format!(
         "{}:{}",

@@ -88,6 +88,22 @@ enum VcIssuerVerifyResponse {
     VerifyFail(Json<String>),
 }
 
+#[derive(ApiResponse)]
+enum VpPresentationResponse {
+    #[oai(status = 200)]
+    Ok(Json<String>),
+    #[oai(status = 400)]
+    PresentationFail(Json<String>),
+}
+
+#[derive(ApiResponse)]
+enum VpVerifyResponse {
+    #[oai(status = 200)]
+    Ok(Json<String>),
+    #[oai(status = 400)]
+    VerifyFail(Json<String>),
+}
+
 #[derive(Enum, Debug)]
 enum VcIssuerOperate {
     Run,
@@ -119,6 +135,17 @@ struct VcIssueAdultProveData {
 struct VcIssueVerifyData {
     issuer_did: String,
     credential: String,
+}
+
+#[derive(Object)]
+struct VpPresentationData {
+    holder_did: String,
+    credential: String,
+}
+
+#[derive(Object)]
+struct VpVerifyData {
+    presentation: String,
 }
 
 #[OpenApi]
@@ -252,6 +279,38 @@ impl DidApi {
         {
             Ok(_signed) => VcIssuerVerifyResponse::Ok(Json("OK".to_string())),
             Err(err) => VcIssuerVerifyResponse::VerifyFail(Json(err.to_string())),
+        }
+    }
+
+    #[oai(path = "/vp/presentation", method = "post")]
+    async fn vp_presentation(
+        &self,
+        pool: Data<&PgPool>,
+        data: Json<VpPresentationData>,
+        _auth: MyApiKeyAuthorization,
+    ) -> VpPresentationResponse {
+        match CredentialService::vp_presentation(
+            pool.0,
+            &format!("did:key:{}", data.0.holder_did),
+            &data.0.credential,
+        )
+        .await
+        {
+            Ok(signed) => VpPresentationResponse::Ok(Json(signed)),
+            Err(err) => VpPresentationResponse::PresentationFail(Json(err.to_string())),
+        }
+    }
+
+    #[oai(path = "/vp/verify", method = "post")]
+    async fn vp_verify(
+        &self,
+        pool: Data<&PgPool>,
+        data: Json<VpVerifyData>,
+        _auth: MyApiKeyAuthorization,
+    ) -> VpVerifyResponse {
+        match CredentialService::vp_verify(pool.0, data.0.presentation).await {
+            Ok(_signed) => VpVerifyResponse::Ok(Json("OK".to_string())),
+            Err(err) => VpVerifyResponse::VerifyFail(Json(err.to_string())),
         }
     }
 }

@@ -56,6 +56,8 @@ pub enum Error {
     VcVerifyParserJsonError,
     #[error("VC Verify error")]
     VcVerifyError,
+    #[error("VP Verify error")]
+    VpVerifyError,
     #[error("Passbase identity read error")]
     PassbaseIdentityReadError,
     #[error("Passbase identity notify backend error")]

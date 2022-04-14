@@ -11,7 +11,7 @@ use std::{collections::HashMap, process::Command};
 use uuid::Uuid;
 
 use did_method_key::DIDKey;
-use didkit::{LinkedDataProofOptions, VerifiableCredential, JWK};
+use didkit::{LinkedDataProofOptions, VerifiableCredential, VerifiablePresentation, JWK};
 
 pub struct CredentialService;
 
@@ -103,6 +103,16 @@ impl From<CredentialServiceStatus> for String {
 }
 
 use crate::model::Did;
+
+fn build_unsigned_vp(holder_did: &str, signed_credential: Value) -> Value {
+    json!({
+        "@context": ["https://www.w3.org/2018/credentials/v1", "https://credential.codegene.xyz/context/adult.jsonld"],
+        "id": format!("urn:uuid:{}", Uuid::new_v4().to_string()),
+        "type": ["VerifiablePresentation"],
+        "holder": holder_did,
+        "verifiableCredential": [signed_credential],
+    })
+}
 
 impl CredentialService {
     /// create a new vc issuer
@@ -488,5 +498,52 @@ impl CredentialService {
         // override issuer did
         credential.issuer_did = issuer.did.clone();
         CredentialService::vc_credential_issue(pool, credential).await
+    }
+
+    pub async fn vp_presentation(
+        pool: &PgPool,
+        holder: &str,
+        signed_credential: &str,
+    ) -> Result<String> {
+        let holder_did = Did::find_by_id(holder, pool).await?;
+
+        let credential: Value = serde_json::from_str(signed_credential).map_err(|e| {
+            tracing::error!("vc presentation issue failed to parse credential: {}", e);
+            Error::VcVerifyParserJsonError
+        })?;
+
+        let unsigned_presentation = build_unsigned_vp(holder, credential);
+
+        let key: JWK = serde_json::from_str(&holder_did.jwk)?;
+        let mut verifiable_presentation: VerifiablePresentation =
+            serde_json::from_value(unsigned_presentation)?;
+        let proof = verifiable_presentation
+            .generate_proof(&key, &LinkedDataProofOptions::default(), &DIDKey)
+            .await?;
+
+        verifiable_presentation.add_proof(proof);
+
+        let signed_presentation = serde_json::to_vec(&verifiable_presentation)?;
+
+        Ok(String::from_utf8(signed_presentation)?)
+    }
+
+    pub async fn vp_verify(pool: &PgPool, signed_presentation: String) -> Result<bool> {
+        let presentation: Value = serde_json::from_str(&signed_presentation).map_err(|e| {
+            tracing::error!("vp verify failed to parse credential: {}", e);
+            Error::VcVerifyParserJsonError
+        })?;
+        let verifiable_presentation: VerifiablePresentation = serde_json::from_value(presentation)?;
+
+        let result = verifiable_presentation
+            .verify(Some(LinkedDataProofOptions::default()), &DIDKey)
+            .await;
+
+        if result.errors.len() > 0 {
+            tracing::error!("vp failed to verify credential: {:?}", result.errors);
+            return Err(Error::VpVerifyError);
+        } else {
+            return Ok(true);
+        }
     }
 }

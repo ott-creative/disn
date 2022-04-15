@@ -22,7 +22,6 @@ use sqlx::PgPool;
 use crate::model::TxRecord;
 use tokio::time::{sleep, Duration as TokioDuration};
 use async_recursion::async_recursion;
-// use web3::types::U64;
 
 pub struct ChainService {
     pool: PgPool,

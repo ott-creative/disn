@@ -55,6 +55,9 @@ did-method-key = { version = "0.1", path = "../ssi/did-key" }
 web3 = "0.18.0"
 secp256k1 = { version = "0.21", features = ["recovery"]}
 async-recursion = "1.0.0"
+openssl = "0.10.38"
+rand = "0.7"
+base64 = "0.13"
 
 [dev-dependencies]
 reqwest = { version = "0.11", features = ["json"] }

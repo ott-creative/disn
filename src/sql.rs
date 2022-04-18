@@ -1,12 +1,12 @@
+use chrono::Utc;
 use sqlx::PgPool;
 use uuid::Uuid;
-use chrono::Utc;
 
 use crate::{
     error::Result,
     model::{
         CreateDidData, CreatePassbaseIdentity, CreateUserData, CreateVcIssuerData, Did,
-        PassbaseIdentity, UpdateVcIssuerData, User, VcIssuer, TxRecord,
+        PassbaseIdentity, TxRecord, UpdateVcIssuerData, User, VcIssuer,
     },
 };
 
@@ -37,7 +37,12 @@ impl TxRecord {
         Ok(sqlx::query_as(&sql).fetch_all(&pool).await?)
     }
 
-    pub async fn update_send_status(tx_hash: String, send_status: i32, block_number: Option<i64>, pool: PgPool) -> Result<TxRecord> {
+    pub async fn update_send_status(
+        tx_hash: String,
+        send_status: i32,
+        block_number: Option<i64>,
+        pool: PgPool,
+    ) -> Result<TxRecord> {
         let sql = format!(
             "
             UPDATE {} SET
@@ -57,7 +62,6 @@ impl TxRecord {
             .fetch_one(&pool)
             .await?)
     }
-
 }
 
 impl User {

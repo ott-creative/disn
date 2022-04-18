@@ -32,6 +32,10 @@ pub enum Error {
     SerdeJsonError(#[from] SerdeJsonError),
     #[error(transparent)]
     StringConvertUtf8Error(#[from] std::string::FromUtf8Error),
+    #[error(transparent)]
+    OpensslError(#[from] openssl::error::ErrorStack),
+    #[error(transparent)]
+    Base64DecodeError(#[from] base64::DecodeError),
     //#[error(transparent)]
     //PoemError(#[from] poem::Error),
     #[error("wrong credentials")]

@@ -19,7 +19,7 @@ use web3::{
     error,
     transports::Http,
     types::Address,
-    types::{H256, U64},
+    types::{H256, U256, U64},
     Transport,
 };
 
@@ -41,9 +41,9 @@ impl ChainService {
         let prvk = SecretKey::from_str(self.settings.controller_private_key.expose_secret())
             .expect("Failed to parse private key");
         let contract = self.contract(contract)?;
-        let tx_hash = contract
-            .signed_call(func, params, Options::default(), &prvk)
-            .await?;
+        let mut options = Options::default();
+        options.gas = Some(U256::from(1_000_000));
+        let tx_hash = contract.signed_call(func, params, options, &prvk).await?;
         let tx_hash = format!("{:#x}", tx_hash);
         self.tx.send((tx_hash.clone(), self.pool.clone())).await?;
         TxRecord::create(tx_hash.clone(), self.pool.clone()).await?;

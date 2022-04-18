@@ -51,13 +51,13 @@ pub struct DidSettings {
     pub predefined_issuers: String,
 }
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, Clone)]
 pub struct ContractMeta {
     pub name: String,
     pub address: String,
 }
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, Clone)]
 pub struct ChainSettings {
     pub controller_private_key: Secret<String>,
     pub contract_abi_path: String,

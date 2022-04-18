@@ -1,47 +1,48 @@
 use crate::configuration::{get_configuration, ChainSettings};
 use crate::error::Result;
+use crate::model::TxRecord;
+use async_recursion::async_recursion;
 use secp256k1::SecretKey;
 use secrecy::ExposeSecret;
+use sqlx::PgPool;
 use std::str::FromStr;
+use std::thread;
+use std::time::Duration;
 use std::{fs, io::Read};
+use tokio::sync::mpsc;
+use tokio::sync::mpsc::{Receiver, Sender};
+use tokio::time::{sleep, Duration as TokioDuration};
 use web3::{
-    error,
     api::Eth,
-    types::{H256, U64},
-    contract::{Contract, Options},
     contract::tokens::Tokenize,
+    contract::{Contract, Options},
+    error,
     transports::Http,
     types::Address,
-    Transport
+    types::{H256, U64},
+    Transport,
 };
-use tokio::sync::mpsc::{Sender, Receiver};
-use std::thread;
-use tokio::sync::mpsc;
-use std::time::Duration;
-use sqlx::PgPool;
-use crate::model::TxRecord;
-use tokio::time::{sleep, Duration as TokioDuration};
-use async_recursion::async_recursion;
 
+#[derive(Clone)]
 pub struct ChainService {
     pool: PgPool,
     tx: Sender<(String, PgPool)>,
     settings: ChainSettings,
-    web3: web3::Web3<Http>
+    web3: web3::Web3<Http>,
 }
 
 impl ChainService {
-    pub async fn send_tx(&self, contract: &str, func: &str, params: impl Tokenize) -> Result<String> {
+    pub async fn send_tx(
+        &self,
+        contract: &str,
+        func: &str,
+        params: impl Tokenize,
+    ) -> Result<String> {
         let prvk = SecretKey::from_str(self.settings.controller_private_key.expose_secret())
-        .expect("Failed to parse private key");
+            .expect("Failed to parse private key");
         let contract = self.contract(contract)?;
         let tx_hash = contract
-            .signed_call(
-                func,
-                params,
-                Options::default(),
-                &prvk,
-            )
+            .signed_call(func, params, Options::default(), &prvk)
             .await?;
         let tx_hash = format!("{:#x}", tx_hash);
         self.tx.send((tx_hash.clone(), self.pool.clone())).await?;
@@ -50,30 +51,47 @@ impl ChainService {
     }
 
     pub async fn run_confirm_server(pool: PgPool) -> ChainService {
-        let (tx, mut rx): (Sender<(String, PgPool)>, Receiver<(String, PgPool)>) = mpsc::channel(100);
+        let (tx, mut rx): (Sender<(String, PgPool)>, Receiver<(String, PgPool)>) =
+            mpsc::channel(100);
         let (web3, settings) = Self::web3_config();
-        let confirm_server = ChainService{ pool, tx, settings: settings , web3};
-        thread::Builder::new().name("confirm-tx".to_string()).spawn(move || {
-            let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
-            rt.block_on(async move {
-                loop {
-                    if let Some((tx_hash, pgpool)) = rx.recv().await {
-                        tokio::spawn(async move {
-                            ChainService::confirm_tx(pgpool, tx_hash).await;
-                        });
-                    };
-                }
-            });
-        }).unwrap();
+        let confirm_server = ChainService {
+            pool,
+            tx,
+            settings: settings,
+            web3,
+        };
+        thread::Builder::new()
+            .name("confirm-tx".to_string())
+            .spawn(move || {
+                let rt = tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                    .unwrap();
+                rt.block_on(async move {
+                    loop {
+                        if let Some((tx_hash, pgpool)) = rx.recv().await {
+                            tokio::spawn(async move {
+                                ChainService::confirm_tx(pgpool, tx_hash).await;
+                            });
+                        };
+                    }
+                });
+            })
+            .unwrap();
         confirm_server.confirm_pending_txs().await;
         confirm_server
     }
 
     async fn confirm_pending_txs(&self) {
         let mut records = TxRecord::find_by_send_status(0, self.pool.clone())
-                .await.unwrap().into_iter();
+            .await
+            .unwrap()
+            .into_iter();
         while let Some(record) = records.next() {
-            self.tx.send((record.tx_hash, self.pool.clone())).await.unwrap();
+            self.tx
+                .send((record.tx_hash, self.pool.clone()))
+                .await
+                .unwrap();
         }
     }
 
@@ -84,7 +102,9 @@ impl ChainService {
         let tx_hash_256 = H256::from_str(&tx_hash).unwrap();
         let eth = web3.eth();
         let confirmation_check = || Self::tx_receipt_check(&eth, tx_hash_256);
-        let result = web3.wait_for_confirmations(poll_interval, 0, confirmation_check).await;
+        let result = web3
+            .wait_for_confirmations(poll_interval, 0, confirmation_check)
+            .await;
         if result.is_err() {
             Self::retry_confirm(&pool, tx_hash.clone()).await;
         }
@@ -94,14 +114,16 @@ impl ChainService {
         if let Ok(Some(receipt)) = receipt_result {
             if receipt.status == Some(1u64.into()) {
                 send_status = 1;
-                if let Some (read_block_number) = receipt.block_number {
+                if let Some(read_block_number) = receipt.block_number {
                     block_number = Some(read_block_number.low_u64() as i64);
                 }
             }
         } else {
             Self::retry_confirm(&pool, tx_hash.clone()).await;
         };
-        TxRecord::update_send_status(tx_hash, send_status, block_number, pool).await.unwrap();
+        TxRecord::update_send_status(tx_hash, send_status, block_number, pool)
+            .await
+            .unwrap();
     }
 
     async fn retry_confirm(pool: &PgPool, tx_hash: String) {
@@ -109,12 +131,15 @@ impl ChainService {
         Self::confirm_tx(pool.clone(), tx_hash).await;
     }
 
-    async fn tx_receipt_check<T: Transport>(eth: &Eth<T>, hash: H256) -> error::Result<Option<U64>> {
+    async fn tx_receipt_check<T: Transport>(
+        eth: &Eth<T>,
+        hash: H256,
+    ) -> error::Result<Option<U64>> {
         let receipt = eth.transaction_receipt(hash).await?;
         Ok(receipt.and_then(|receipt| receipt.block_number))
     }
 
-    fn web3_config() -> (web3::Web3<Http>, ChainSettings){
+    fn web3_config() -> (web3::Web3<Http>, ChainSettings) {
         let settings = get_configuration().expect("Failed to get configuration");
 
         let transport = web3::transports::Http::new(&settings.chain.provider).unwrap();
@@ -129,8 +154,11 @@ impl ChainService {
         )
         .expect("Failed to parse contract address");
 
-        let mut abi_file = fs::File::open(format!("{}/{}.json", &self.settings.contract_abi_path, name))
-            .expect("Failed to open contract ABI");
+        let mut abi_file = fs::File::open(format!(
+            "{}/{}.json",
+            &self.settings.contract_abi_path, name
+        ))
+        .expect("Failed to open contract ABI");
         let mut abi = String::new();
         abi_file
             .read_to_string(&mut abi)
@@ -156,10 +184,17 @@ mod tests {
         let email = format!("{}@example.com", &data);
         let configuration = get_configuration().expect("Failed to read configuration.");
         let pg_pool = PgPoolOptions::new()
-        .connect_timeout(std::time::Duration::from_secs(2))
-        .connect_with(configuration.database.with_db()).await.unwrap();
+            .connect_timeout(std::time::Duration::from_secs(2))
+            .connect_with(configuration.database.with_db())
+            .await
+            .unwrap();
         let server = ChainService::run_confirm_server(pg_pool).await;
-        let _tx_hash = server.send_tx(&contract_name, "saveEvidence", (email.clone(), data.clone()))
+        let _tx_hash = server
+            .send_tx(
+                &contract_name,
+                "saveEvidence",
+                (email.clone(), data.clone()),
+            )
             .await
             .unwrap();
         std::thread::sleep(std::time::Duration::from_secs(10));

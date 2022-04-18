@@ -1,10 +1,11 @@
 use crate::{
     configuration::get_configuration,
+    credentials::adult_prove::CredentialAdultProve,
     error::{Error, Result},
     model::{CreatePassbaseIdentity, PassbaseIdentity},
     service::{
         did::DidService,
-        vc::{Credential, CredentialAdultProve, CredentialService, Credentials},
+        vc::{Credential, CredentialService, Credentials},
     },
 };
 use chrono::{Datelike, NaiveDate, Utc};

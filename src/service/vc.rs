@@ -1,8 +1,12 @@
 use crate::{
     configuration::get_configuration,
+    credentials::{
+        adult_prove::CredentialAdultProve, personal_identity::CredentialPersonalIdentity,
+        VerifiableCredential as VC,
+    },
     error::{Error, Result},
     model::{CreateVcIssuerData, UpdateVcIssuerData, VcIssuer},
-    service::did::DidService,
+    service::{chain::ChainService, did::DidService},
 };
 use chrono::Utc;
 use serde_json::{json, Value};
@@ -14,11 +18,6 @@ use did_method_key::DIDKey;
 use didkit::{LinkedDataProofOptions, VerifiableCredential, VerifiablePresentation, JWK};
 
 pub struct CredentialService;
-
-pub struct CredentialAdultProve {
-    pub identity: String,
-    pub is_adult: bool,
-}
 
 #[derive(Deserialize)]
 pub struct VerifyResult {
@@ -32,27 +31,21 @@ pub struct IssueResult {
     pub issuer_did: String,
     pub holder_did: String,
     pub signed_credential: String,
-}
-
-impl CredentialAdultProve {
-    pub fn generate_json(&self, issuer: &str, holder: &str) -> Value {
-        json!({
-            "@context": ["https://www.w3.org/2018/credentials/v1", "https://credential.codegene.xyz/context/adult.jsonld"],
-            "id": format!("urn:uuid:{}", Uuid::new_v4().to_string()),
-            "type": ["VerifiableCredential"],
-            "issuer": issuer,
-            "holder": holder,
-            "credentialSubject": {
-                "id": holder,
-                "email": self.identity,
-                "isAdult": self.is_adult,
-            }
-        })
-    }
+    pub tx_hash: String,
 }
 
 pub enum Credentials {
     AdultProve(CredentialAdultProve),
+    PersonalIdentity(CredentialPersonalIdentity),
+}
+
+impl VC for Credentials {
+    fn generate_unsigned(&self, issuer: &str, holder: &str) -> Value {
+        match self {
+            Credentials::AdultProve(cred) => cred.generate_unsigned(issuer, holder),
+            Credentials::PersonalIdentity(cred) => cred.generate_unsigned(issuer, holder),
+        }
+    }
 }
 
 pub struct Credential {
@@ -244,77 +237,79 @@ impl CredentialService {
         Ok(())
     }
 
-    /// issue credential
-    pub async fn vc_credential_issue(pool: &PgPool, credential: Credential) -> Result<IssueResult> {
-        // check if this issuer is running
-        let issuer = VcIssuer::find_by_did(&credential.issuer_did, &pool).await?;
-        if issuer.status != CredentialServiceStatus::Running as i32 {
-            tracing::info!("Issuer {} not running", &credential.issuer_did);
-            return Err(Error::VcIssuerNotRunning);
-            // TODO: should we start service here?
-        }
-
-        // prepare unsigned credential
-        let credential_unsigned;
-        match credential.credential {
-            Credentials::AdultProve(adult_prove) => {
-                //credential_unsigned = adult_prove.generate_unsigned();
-                credential_unsigned =
-                    adult_prove.generate_json(&issuer.did, &credential.holder_did);
-                tracing::info!("credential unsigned:{}", credential_unsigned);
+    /*
+        /// issue credential
+        pub async fn vc_credential_issue(pool: &PgPool, credential: Credential) -> Result<IssueResult> {
+            // check if this issuer is running
+            let issuer = VcIssuer::find_by_did(&credential.issuer_did, &pool).await?;
+            if issuer.status != CredentialServiceStatus::Running as i32 {
+                tracing::info!("Issuer {} not running", &credential.issuer_did);
+                return Err(Error::VcIssuerNotRunning);
+                // TODO: should we start service here?
             }
-        }
 
-        // sign credential
-        let client = reqwest::Client::new();
-        let body = json!({
-          "credential": credential_unsigned,
-          "options": {
-            "verificationMethod": format!("{}#{}", issuer.did, issuer.did.chars().skip(8).collect::<String>()),
-            "proofPurpose": "assertionMethod"
-          }
-        });
+            // prepare unsigned credential
+            let credential_unsigned;
+            match credential.credential {
+                Credentials::AdultProve(adult_prove) => {
+                    //credential_unsigned = adult_prove.generate_unsigned();
+                    credential_unsigned =
+                        adult_prove.generate_json(&issuer.did, &credential.holder_did);
+                    tracing::info!("credential unsigned:{}", credential_unsigned);
+                }
+            }
 
-        // Act
-        let response = client
-            .post(format!(
-                "http://127.0.0.1:{}/issue/credentials",
-                issuer.service_address
-            ))
-            .header("Content-Type", "application/json")
-            .json(&body)
-            .send()
-            .await
-            .map_err(|e| {
-                tracing::error!(
-                    "vc issuer {} failed to issue credential: {}",
-                    &credential.issuer_did,
-                    e
-                );
-                Error::VcIssueError
-            })?;
+            // sign credential
+            let client = reqwest::Client::new();
+            let body = json!({
+              "credential": credential_unsigned,
+              "options": {
+                "verificationMethod": format!("{}#{}", issuer.did, issuer.did.chars().skip(8).collect::<String>()),
+                "proofPurpose": "assertionMethod"
+              }
+            });
 
-        Ok(IssueResult {
-            signed_credential: response
-                .text()
+            // Act
+            let response = client
+                .post(format!(
+                    "http://127.0.0.1:{}/issue/credentials",
+                    issuer.service_address
+                ))
+                .header("Content-Type", "application/json")
+                .json(&body)
+                .send()
                 .await
                 .map_err(|e| {
                     tracing::error!(
-                        "vc issuer {} failed to parse response: {}",
+                        "vc issuer {} failed to issue credential: {}",
                         &credential.issuer_did,
                         e
                     );
                     Error::VcIssueError
-                })?
-                .to_string(),
-            issuer_did: issuer.did,
-            holder_did: credential.holder_did,
-        })
-    }
+                })?;
 
+            Ok(IssueResult {
+                signed_credential: response
+                    .text()
+                    .await
+                    .map_err(|e| {
+                        tracing::error!(
+                            "vc issuer {} failed to parse response: {}",
+                            &credential.issuer_did,
+                            e
+                        );
+                        Error::VcIssueError
+                    })?
+                    .to_string(),
+                issuer_did: issuer.did,
+                holder_did: credential.holder_did,
+            })
+        }
+    */
     //. issue credential with lib access
     pub async fn vc_credential_issue_with_lib(
         pool: &PgPool,
+        chain: &ChainService,
         credential: Credential,
     ) -> Result<IssueResult> {
         // check if this issuer is running
@@ -322,15 +317,9 @@ impl CredentialService {
         let issuer = VcIssuer::find_by_did(&credential.issuer_did, &pool).await?;
         let issuer_did = Did::find_by_id(&issuer.did, pool).await?;
 
-        let credential_unsigned;
-        match credential.credential {
-            Credentials::AdultProve(adult_prove) => {
-                //credential_unsigned = adult_prove.generate_unsigned();
-                credential_unsigned =
-                    adult_prove.generate_json(&issuer.did, &credential.holder_did);
-                tracing::info!("credential unsigned:{}", credential_unsigned);
-            }
-        }
+        let credential_unsigned = credential
+            .credential
+            .generate_unsigned(&issuer.did, &credential.holder_did);
 
         let key: JWK = serde_json::from_str(&issuer_did.jwk)?;
         let mut verifiable_credential: VerifiableCredential =
@@ -343,10 +332,14 @@ impl CredentialService {
 
         let signed_credential = serde_json::to_vec(&verifiable_credential)?;
 
+        // submit to chain
+        // let tx_hash = chain.send_tx()
+
         Ok(IssueResult {
             signed_credential: String::from_utf8(signed_credential)?,
             issuer_did: issuer.did,
             holder_did: credential.holder_did,
+            tx_hash: "0x".to_string(),
         })
     }
 
@@ -417,6 +410,7 @@ impl CredentialService {
 
     pub async fn vc_credential_verify_with_lib(
         pool: &PgPool,
+        chain: &ChainService,
         issuer_did: &str,
         signed_credential: String,
     ) -> Result<bool> {
@@ -483,7 +477,7 @@ impl CredentialService {
     }
 
     /// use predefined vc issuer to issue credential
-    pub async fn vc_credential_issue_predefined(
+    /*pub async fn vc_credential_issue_predefined(
         pool: &PgPool,
         issuer_name: &str,
         mut credential: Credential,
@@ -497,8 +491,8 @@ impl CredentialService {
 
         // override issuer did
         credential.issuer_did = issuer.did.clone();
-        CredentialService::vc_credential_issue(pool, credential).await
-    }
+        CredentialService::vc_credential_issue_with_lib(pool, credential).await
+    }*/
 
     pub async fn vp_presentation(
         pool: &PgPool,

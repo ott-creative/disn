@@ -1,7 +1,8 @@
 use crate::configuration::get_configuration;
 use crate::service::{
+    chain::ChainService,
     did::DidService,
-    vc::{Credential, CredentialAdultProve, CredentialService, Credentials},
+    vc::{Credential, CredentialService, Credentials},
 };
 use poem::{web::Data, Request};
 use poem_openapi::{
@@ -148,6 +149,77 @@ struct VpVerifyData {
     presentation: String,
 }
 
+#[derive(Object, Serialize, Deserialize)]
+pub struct VcIssuePersonalIdentityData {
+    pub issuer_did: String,
+    pub holder_did: String,
+    pub result: PartyResult,
+}
+
+#[derive(Object, Serialize, Deserialize)]
+pub struct Face {
+    #[serde(rename = "isIdentical")]
+    pub is_identical: bool,
+    pub confidence: String,
+}
+
+#[derive(Object, Serialize, Deserialize)]
+pub struct PartyResult {
+    pub result: PersonalInfo,
+    pub face: Face,
+    pub verification: PersonalVerification,
+}
+
+#[derive(Object, Serialize, Deserialize)]
+pub struct PersonalInfo {
+    #[serde(rename = "documentNumber")]
+    pub document_number: String,
+    #[serde(rename = "firstName")]
+    pub first_name: String,
+    #[serde(rename = "lastName")]
+    pub last_name: String,
+    #[serde(rename = "fullName")]
+    pub full_name: String,
+    pub sex: String,
+    pub dob: String,
+    pub expiry: String,
+    #[serde(rename = "daysToExpiry")]
+    pub days_to_expiry: i64,
+    pub issued: String,
+    #[serde(rename = "daysFromIssue")]
+    pub days_from_issue: i64,
+    pub address1: String,
+    #[serde(rename = "optionalData")]
+    pub optional_data: String,
+    #[serde(rename = "documentType")]
+    pub document_type: String,
+    #[serde(rename = "documentSide")]
+    pub document_side: String,
+    #[serde(rename = "issueAuthority")]
+    pub issue_authority: String,
+    #[serde(rename = "issuerOrg_full")]
+    pub issuer_org_full: String,
+    #[serde(rename = "issuerOrg_iso2")]
+    pub issuer_org_iso2: String,
+    #[serde(rename = "issuerOrg_iso3")]
+    pub issuer_org_iso3: String,
+    pub nationality_full: String,
+    pub nationality_iso2: String,
+    pub nationality_iso3: String,
+}
+
+#[derive(Object, Serialize, Deserialize)]
+pub struct PersonalVerification {
+    pub passed: bool,
+    pub result: PersonalVerificationResult,
+}
+
+#[derive(Object, Serialize, Deserialize)]
+pub struct PersonalVerificationResult {
+    pub face: bool,
+    pub checkdigit: bool,
+}
+
 #[OpenApi]
 impl DidApi {
     /// Create did
@@ -236,24 +308,49 @@ impl DidApi {
             }
         }
     }
+    /*
+        #[oai(path = "/vc/issue/adult_prove", method = "post")]
+        async fn vc_issuer_credential_issue(
+            &self,
+            pool: Data<&PgPool>,
+            data: Json<VcIssueAdultProveData>,
+            _auth: MyApiKeyAuthorization,
+        ) -> VcIssuerIssueResponse {
+            match CredentialService::vc_credential_issue_with_lib(
+                pool.0,
+                Credential {
+                    holder_did: format!("did:key:{}", data.0.holder_did),
+                    issuer_did: format!("did:key:{}", data.0.issuer_did),
 
-    #[oai(path = "/vc/issue/adult_prove", method = "post")]
-    async fn vc_issuer_credential_issue(
+                    credential: Credentials::AdultProve(CredentialAdultProve {
+                        identity: data.0.identity,
+                        is_adult: data.0.is_adult,
+                    }),
+                },
+            )
+            .await
+            {
+                Ok(signed) => VcIssuerIssueResponse::Ok(Json(signed.signed_credential)),
+                Err(err) => VcIssuerIssueResponse::IssueFail(Json(err.to_string())),
+            }
+        }
+    */
+    #[oai(path = "/vc/issue/personal-identity", method = "post")]
+    async fn vc_issuer_issue_personal_identity(
         &self,
         pool: Data<&PgPool>,
-        data: Json<VcIssueAdultProveData>,
+        chain: Data<&ChainService>,
+        data: Json<VcIssuePersonalIdentityData>,
         _auth: MyApiKeyAuthorization,
     ) -> VcIssuerIssueResponse {
         match CredentialService::vc_credential_issue_with_lib(
             pool.0,
+            chain.0,
             Credential {
                 holder_did: format!("did:key:{}", data.0.holder_did),
                 issuer_did: format!("did:key:{}", data.0.issuer_did),
 
-                credential: Credentials::AdultProve(CredentialAdultProve {
-                    identity: data.0.identity,
-                    is_adult: data.0.is_adult,
-                }),
+                credential: Credentials::PersonalIdentity(data.0.result.into()),
             },
         )
         .await
@@ -267,11 +364,13 @@ impl DidApi {
     async fn vc_issuer_credential_verify(
         &self,
         pool: Data<&PgPool>,
+        chain: Data<&ChainService>,
         data: Json<VcIssueVerifyData>,
         _auth: MyApiKeyAuthorization,
     ) -> VcIssuerVerifyResponse {
         match CredentialService::vc_credential_verify_with_lib(
             pool.0,
+            chain.0,
             &format!("did:key:{}", data.0.issuer_did),
             data.0.credential,
         )

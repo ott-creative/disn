@@ -5,8 +5,8 @@ use uuid::Uuid;
 use crate::{
     error::Result,
     model::{
-        CreateDidData, CreatePassbaseIdentity, CreateUserData, CreateVcIssuerData, Did,
-        PassbaseIdentity, TxRecord, UpdateVcIssuerData, User, VcIssuer,
+        CreateDidData, CreateUserData, CreateVcIssuerData, Did, TxRecord, UpdateVcIssuerData, User,
+        VcIssuer,
     },
 };
 
@@ -200,6 +200,7 @@ impl Did {
     }
 }
 
+/*
 impl PassbaseIdentity {
     pub async fn create(data: CreatePassbaseIdentity, pool: &PgPool) -> Result<PassbaseIdentity> {
         let sql = format!(
@@ -255,4 +256,4 @@ impl PassbaseIdentity {
         );
         Ok(sqlx::query_as(&sql).bind(id).fetch_one(pool).await?)
     }
-}
+}*/

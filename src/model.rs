@@ -94,6 +94,7 @@ pub struct UpdateVcIssuerData {
     pub updated_at: DateTime<Utc>,
 }
 
+/*
 #[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
 pub struct PassbaseIdentity {
     pub id: String,
@@ -121,4 +122,4 @@ pub struct CreatePassbaseIdentity {
     pub is_backend_notified: Option<bool>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
-}
+}*/

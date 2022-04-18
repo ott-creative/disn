@@ -7,7 +7,7 @@ use futures::Future;
 use sqlx::PgPool;
 
 use crate::service::chain::ChainService;
-use poem::{listener::TcpListener, middleware::Cors, post, Endpoint, EndpointExt, Route, Server};
+use poem::{listener::TcpListener, middleware::Cors, Endpoint, EndpointExt, Route, Server};
 use poem_openapi::OpenApiService;
 
 pub mod api;

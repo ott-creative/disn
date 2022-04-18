@@ -48,6 +48,15 @@ impl VC for Credentials {
     }
 }
 
+impl Credentials {
+    pub fn contract_name(&self) -> &str {
+        match self {
+            Credentials::AdultProve(_) => "identity",
+            Credentials::PersonalIdentity(_) => "identity",
+        }
+    }
+}
+
 pub struct Credential {
     pub issuer_did: String,
     pub holder_did: String,
@@ -331,15 +340,22 @@ impl CredentialService {
         verifiable_credential.add_proof(proof);
 
         let signed_credential = serde_json::to_vec(&verifiable_credential)?;
+        let signed_credential_str = String::from_utf8(signed_credential)?;
 
         // submit to chain
-        // let tx_hash = chain.send_tx()
+        let tx_hash = chain
+            .send_tx(
+                credential.credential.contract_name(),
+                "saveEvidence",
+                (credential.holder_did.clone(), signed_credential_str.clone()),
+            )
+            .await?;
 
         Ok(IssueResult {
-            signed_credential: String::from_utf8(signed_credential)?,
+            signed_credential: signed_credential_str,
             issuer_did: issuer.did,
             holder_did: credential.holder_did,
-            tx_hash: "0x".to_string(),
+            tx_hash,
         })
     }
 
@@ -410,7 +426,7 @@ impl CredentialService {
 
     pub async fn vc_credential_verify_with_lib(
         pool: &PgPool,
-        chain: &ChainService,
+        _chain: &ChainService,
         issuer_did: &str,
         signed_credential: String,
     ) -> Result<bool> {
@@ -522,7 +538,7 @@ impl CredentialService {
         Ok(String::from_utf8(signed_presentation)?)
     }
 
-    pub async fn vp_verify(pool: &PgPool, signed_presentation: String) -> Result<bool> {
+    pub async fn vp_verify(_pool: &PgPool, signed_presentation: String) -> Result<bool> {
         let presentation: Value = serde_json::from_str(&signed_presentation).map_err(|e| {
             tracing::error!("vp verify failed to parse credential: {}", e);
             Error::VcVerifyParserJsonError

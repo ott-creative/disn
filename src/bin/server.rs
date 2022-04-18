@@ -1,7 +1,6 @@
 use disn::configuration::get_configuration;
 use disn::service::chain;
 use disn::service::vc;
-use disn::telemetry::{get_subscriber, init_subscriber};
 use poem::listener::TcpListener;
 use sqlx::postgres::PgPoolOptions;
 

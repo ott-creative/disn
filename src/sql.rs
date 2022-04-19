@@ -179,8 +179,8 @@ impl Did {
     pub async fn create(data: CreateDidData, pool: &PgPool) -> Result<Did> {
         let sql = format!(
             "
-            INSERT INTO {} (id, jwk, created_at, updated_at)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO {} (id, jwk, encrypt_public_key, encrypt_private_key, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING *
             ",
             Did::TABLE
@@ -188,6 +188,8 @@ impl Did {
         Ok(sqlx::query_as(&sql)
             .bind(data.id)
             .bind(data.jwk)
+            .bind(data.encrypt_public_key)
+            .bind(data.encrypt_private_key)
             .bind(data.created_at)
             .bind(data.updated_at)
             .fetch_one(pool)

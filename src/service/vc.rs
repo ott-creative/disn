@@ -7,6 +7,7 @@ use crate::{
     error::{Error, Result},
     model::{CreateVcIssuerData, UpdateVcIssuerData, VcIssuer},
     service::{chain::ChainService, did::DidService},
+    utils::envelope,
 };
 use chrono::Utc;
 use serde_json::{json, Value};
@@ -30,6 +31,8 @@ pub struct VerifyResult {
 pub struct IssueResult {
     pub issuer_did: String,
     pub holder_did: String,
+    pub issuer_cipher: String,
+    pub holder_cipher: String,
     pub signed_credential: String,
     pub tx_hash: String,
 }
@@ -325,6 +328,7 @@ impl CredentialService {
         // TODO: join query
         let issuer = VcIssuer::find_by_did(&credential.issuer_did, &pool).await?;
         let issuer_did = Did::find_by_id(&issuer.did, pool).await?;
+        let holder_did = Did::find_by_id(&credential.holder_did, pool).await?;
 
         let credential_unsigned = credential
             .credential
@@ -342,21 +346,46 @@ impl CredentialService {
         let signed_credential = serde_json::to_vec(&verifiable_credential)?;
         let signed_credential_str = String::from_utf8(signed_credential)?;
 
+        // encrypt credential
+        let encrypted = envelope::seal(
+            &issuer_did.encrypt_public_key,
+            &holder_did.encrypt_public_key,
+            &signed_credential_str,
+        )?;
+
         // submit to chain
         let tx_hash = chain
             .send_tx(
                 credential.credential.contract_name(),
-                "saveEvidence",
-                (credential.holder_did.clone(), signed_credential_str.clone()),
+                "saveCredential",
+                (
+                    credential.holder_did.clone(),
+                    encrypted.0.clone(),
+                    vec![holder_did.encrypt_public_key, issuer_did.encrypt_public_key],
+                    vec![encrypted.2.clone(), encrypted.1.clone()],
+                ),
             )
             .await?;
 
         Ok(IssueResult {
-            signed_credential: signed_credential_str,
+            signed_credential: encrypted.0,
             issuer_did: issuer.did,
             holder_did: credential.holder_did,
+            issuer_cipher: encrypted.1,
+            holder_cipher: encrypted.2,
             tx_hash,
         })
+    }
+
+    /// decrypt credential
+    pub async fn vc_credential_decrypt(
+        pool: &PgPool,
+        did: &str,
+        encrypted: &str,
+        cipher: &str,
+    ) -> Result<String> {
+        let owner = Did::find_by_id(did, pool).await?;
+        envelope::unseal(encrypted, cipher, &owner.encrypt_private_key)
     }
 
     /// verify credential

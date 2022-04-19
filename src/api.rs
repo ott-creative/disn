@@ -37,6 +37,8 @@ async fn api_checker(_req: &Request, api_key: ApiKey) -> Option<()> {
 struct VcIssueResult {
     tx_hash: String,
     vc: String,
+    issuer_cipher: String,
+    holder_cipher: String,
 }
 
 #[derive(ApiResponse)]
@@ -85,6 +87,14 @@ enum VcIssuerIssueResponse {
     Ok(Json<VcIssueResult>),
     #[oai(status = 400)]
     IssueFail(Json<String>),
+}
+
+#[derive(ApiResponse)]
+enum VcDecryptResponse {
+    #[oai(status = 200)]
+    Ok(Json<String>),
+    #[oai(status = 400)]
+    DecryptFail(Json<String>),
 }
 
 #[derive(ApiResponse)]
@@ -148,6 +158,13 @@ struct VcIssueVerifyData {
 struct VpPresentationData {
     holder_did: String,
     credential: String,
+}
+
+#[derive(Object)]
+struct VcDecryptData {
+    encrypted: String,
+    did: String,
+    cipher: String,
 }
 
 #[derive(Object)]
@@ -364,8 +381,31 @@ impl DidApi {
             Ok(signed) => VcIssuerIssueResponse::Ok(Json(VcIssueResult {
                 vc: signed.signed_credential,
                 tx_hash: signed.tx_hash,
+                issuer_cipher: signed.issuer_cipher,
+                holder_cipher: signed.holder_cipher,
             })),
             Err(err) => VcIssuerIssueResponse::IssueFail(Json(err.to_string())),
+        }
+    }
+
+    #[oai(path = "/vc/decrypt", method = "post")]
+    async fn vc_credential_decrypt(
+        &self,
+        pool: Data<&PgPool>,
+        _chain: Data<&ChainService>,
+        data: Json<VcDecryptData>,
+        _auth: MyApiKeyAuthorization,
+    ) -> VcDecryptResponse {
+        match CredentialService::vc_credential_decrypt(
+            pool.0,
+            &format!("did:key:{}", data.0.did),
+            &data.0.encrypted,
+            &data.0.cipher,
+        )
+        .await
+        {
+            Ok(decrypted) => VcDecryptResponse::Ok(Json(decrypted)),
+            Err(err) => VcDecryptResponse::DecryptFail(Json(err.to_string())),
         }
     }
 

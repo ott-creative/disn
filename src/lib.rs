@@ -22,7 +22,7 @@ mod response;
 pub mod service;
 mod sql;
 pub mod telemetry;
-mod utils;
+pub mod utils;
 
 pub mod constants;
 

@@ -43,6 +43,8 @@ pub struct CreateUserData {
 pub struct Did {
     pub id: String,
     pub jwk: String,
+    pub encrypt_public_key: String,
+    pub encrypt_private_key: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -55,6 +57,8 @@ impl Did {
 pub struct CreateDidData {
     pub id: String,
     pub jwk: String,
+    pub encrypt_public_key: String,
+    pub encrypt_private_key: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }

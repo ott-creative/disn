@@ -1,5 +1,6 @@
 use crate::configuration::get_configuration;
 use crate::error::{Error, Result};
+use crate::utils::envelope;
 use chrono::Utc;
 use did_method_key::DIDKey;
 use didkit::{DIDMethod, Source, JWK};
@@ -22,9 +23,14 @@ impl DidService {
         // TODO: encrypt
         let jwk_str = serde_json::to_string(&jwk).unwrap();
 
+        // create encrypt keys
+        let key_pair = envelope::generate_rsa_keypair();
+
         let data = CreateDidData {
             id: did.clone(),
             jwk: jwk_str,
+            encrypt_public_key: key_pair.1,
+            encrypt_private_key: key_pair.0,
             created_at: Utc::now(),
             updated_at: Utc::now(),
         };

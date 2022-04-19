@@ -1,5 +1,4 @@
 use disn::configuration::get_configuration;
-use disn::service::chain;
 use disn::telemetry::{get_subscriber, init_subscriber};
 use once_cell::sync::Lazy;
 use poem::listener::TcpListener;

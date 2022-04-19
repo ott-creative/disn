@@ -1,5 +1,4 @@
 use disn::service::vc;
-use disn::CHAIN;
 use disn::CONFIG;
 use disn::PG_POOL;
 use poem::listener::TcpListener;

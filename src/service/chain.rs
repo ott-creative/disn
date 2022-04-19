@@ -1,4 +1,4 @@
-use crate::configuration::{get_configuration, ChainSettings};
+use crate::configuration::ChainSettings;
 use crate::error::Result;
 use crate::model::TxRecord;
 use async_recursion::async_recursion;
@@ -6,11 +6,8 @@ use secp256k1::SecretKey;
 use secrecy::ExposeSecret;
 use sqlx::PgPool;
 use std::str::FromStr;
-use std::thread;
 use std::time::Duration;
 use std::{fs, io::Read};
-use tokio::sync::mpsc;
-use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::time::{sleep, Duration as TokioDuration};
 use web3::{
     api::Eth,

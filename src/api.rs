@@ -33,6 +33,12 @@ async fn api_checker(_req: &Request, api_key: ApiKey) -> Option<()> {
     }
 }
 
+#[derive(Object, Serialize, Deserialize, Debug)]
+struct VcIssueResult {
+    tx_hash: String,
+    vc: String,
+}
+
 #[derive(ApiResponse)]
 enum DidCreateResponse {
     /// Returns when the did is successfully created.
@@ -76,7 +82,7 @@ enum VcIssuerOperateResponse {
 #[derive(ApiResponse)]
 enum VcIssuerIssueResponse {
     #[oai(status = 200)]
-    Ok(Json<String>),
+    Ok(Json<VcIssueResult>),
     #[oai(status = 400)]
     IssueFail(Json<String>),
 }
@@ -355,7 +361,10 @@ impl DidApi {
         )
         .await
         {
-            Ok(signed) => VcIssuerIssueResponse::Ok(Json(signed.signed_credential)),
+            Ok(signed) => VcIssuerIssueResponse::Ok(Json(VcIssueResult {
+                vc: signed.signed_credential,
+                tx_hash: signed.tx_hash,
+            })),
             Err(err) => VcIssuerIssueResponse::IssueFail(Json(err.to_string())),
         }
     }

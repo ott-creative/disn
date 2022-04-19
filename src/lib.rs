@@ -16,7 +16,7 @@ mod error;
 //mod extractors;
 pub mod credentials;
 pub mod handlers;
-mod model;
+pub mod model;
 mod response;
 pub mod service;
 mod sql;

@@ -21,7 +21,7 @@ use web3::{
 };
 #[derive(Clone)]
 pub struct ChainService {
-    pool: PgPool,
+    pub pool: PgPool,
     settings: ChainSettings,
     web3: web3::Web3<Http>,
 }
@@ -59,7 +59,7 @@ impl ChainService {
     }
 
     #[async_recursion]
-    async fn confirm_tx(&self, tx_hash: String) {
+    pub async fn confirm_tx(&self, tx_hash: String) {
         let tx_hash_256 = H256::from_str(&tx_hash).unwrap();
         let eth = self.web3.eth();
         let poll_interval = Duration::from_secs(2);
@@ -126,19 +126,6 @@ impl ChainService {
             abi.as_bytes(),
         )?)
     }
-
-    // async fn confirm_pending_txs(&self) {
-    //     let mut records = TxRecord::find_by_send_status(0, self.pool.clone())
-    //         .await
-    //         .unwrap()
-    //         .into_iter();
-    //     while let Some(record) = records.next() {
-    //         self.tx
-    //             .send((record.tx_hash, self.pool.clone()))
-    //             .await
-    //             .unwrap();
-    //     }
-    // }
 }
 
 #[cfg(test)]

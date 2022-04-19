@@ -182,10 +182,10 @@ mod tests {
         let contract_name = "identity".to_string();
         let configuration = get_configuration().expect("Failed to read configuration.");
         let pg_pool = PgPoolOptions::new()
-        .connect_timeout(std::time::Duration::from_secs(2))
-        .connect_with(configuration.database.with_db())
-        .await
-        .unwrap();
+            .connect_timeout(std::time::Duration::from_secs(2))
+            .connect_with(configuration.database.with_db())
+            .await
+            .unwrap();
         let server = ChainService::run_confirm_server(pg_pool).await;
 
         let key = uuid::Uuid::new_v4().to_string();
@@ -196,14 +196,25 @@ mod tests {
             .send_tx(
                 &contract_name,
                 "saveCredential",
-                (key.clone(), cipher_data.clone(), pub_keys.clone(), cipher_keys.clone()),
+                (
+                    key.clone(),
+                    cipher_data.clone(),
+                    pub_keys.clone(),
+                    cipher_keys.clone(),
+                ),
             )
             .await
             .unwrap();
         std::thread::sleep(std::time::Duration::from_secs(10));
         let contract = server.contract(&contract_name).unwrap();
         let (active_cipher_data, active_cipher_key): (String, String) = contract
-            .query("getCredential", (key, pub_keys[0].clone()), None, Options::default(), None)
+            .query(
+                "getCredential",
+                (key, pub_keys[0].clone()),
+                None,
+                Options::default(),
+                None,
+            )
             .await
             .unwrap();
         assert_eq!(cipher_data, active_cipher_data);

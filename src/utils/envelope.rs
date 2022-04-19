@@ -15,7 +15,11 @@ pub fn generate_rsa_keypair() -> (String, String) {
 }
 
 #[allow(dead_code)]
-pub fn seal(issuer_pubkey: &str, holder_pubkey: &str, data: &str) -> Result<(String, String, String)> {
+pub fn seal(
+    issuer_pubkey: &str,
+    holder_pubkey: &str,
+    data: &str,
+) -> Result<(String, String, String)> {
     let mut key_iv: [u8; 48] = [0; 48];
     OsRng.fill_bytes(&mut key_iv);
     let key: &[u8] = &key_iv[..32];

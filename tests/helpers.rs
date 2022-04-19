@@ -1,10 +1,10 @@
 use disn::configuration::get_configuration;
+use disn::service::chain;
 use disn::telemetry::{get_subscriber, init_subscriber};
 use once_cell::sync::Lazy;
 use poem::listener::TcpListener;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use uuid::Uuid;
-use disn::service::chain;
 
 // Ensure that the `tracing` stack is only initialised once using `once_cell`
 static TRACING: Lazy<()> = Lazy::new(|| {

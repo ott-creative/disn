@@ -34,7 +34,8 @@ pub struct IssueResult {
     pub holder_did: String,
     pub issuer_cipher: String,
     pub holder_cipher: String,
-    pub signed_credential: String,
+    pub signed_credential_encrypt: String,
+    pub signed_credential_plain: String,
     pub tx_hash: String,
 }
 
@@ -368,7 +369,8 @@ impl CredentialService {
             .await?;
 
         Ok(IssueResult {
-            signed_credential: encrypted.0,
+            signed_credential_encrypt: encrypted.0,
+            signed_credential_plain: signed_credential_str,
             issuer_did: issuer.did,
             holder_did: credential.holder_did,
             issuer_cipher: encrypted.1,

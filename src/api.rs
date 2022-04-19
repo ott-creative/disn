@@ -8,6 +8,7 @@ use poem::{web::Data, Request};
 use poem_openapi::{
     auth::ApiKey, param::Path, payload::Json, ApiResponse, Enum, Object, OpenApi, SecurityScheme,
 };
+use serde_json::{json, Value};
 use sqlx::PgPool;
 
 pub struct DidApi;
@@ -37,6 +38,7 @@ async fn api_checker(_req: &Request, api_key: ApiKey) -> Option<()> {
 struct VcIssueResult {
     tx_hash: String,
     vc: String,
+    vc_plain: Value,
     issuer_cipher: String,
     holder_cipher: String,
 }
@@ -377,7 +379,8 @@ impl DidApi {
         .await
         {
             Ok(signed) => VcIssuerIssueResponse::Ok(Json(VcIssueResult {
-                vc: signed.signed_credential,
+                vc: signed.signed_credential_encrypt,
+                vc_plain: serde_json::from_str(&signed.signed_credential_plain).unwrap(),
                 tx_hash: signed.tx_hash,
                 issuer_cipher: signed.issuer_cipher,
                 holder_cipher: signed.holder_cipher,

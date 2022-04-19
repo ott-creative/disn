@@ -8,7 +8,7 @@ use poem::{web::Data, Request};
 use poem_openapi::{
     auth::ApiKey, param::Path, payload::Json, ApiResponse, Enum, Object, OpenApi, SecurityScheme,
 };
-use serde_json::{json, Value};
+use serde_json::Value;
 use sqlx::PgPool;
 
 pub struct DidApi;

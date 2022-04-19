@@ -1,4 +1,5 @@
 use disn::configuration::get_configuration;
+use disn::service::chain;
 use disn::telemetry::{get_subscriber, init_subscriber};
 use once_cell::sync::Lazy;
 use poem::listener::TcpListener;
@@ -27,8 +28,9 @@ pub async fn spawn_app() -> String {
     let pg_pool = prepare_db().await;
 
     let listener = TcpListener::bind("127.0.0.1:3000".to_string());
+    let chain = chain::ChainService::run_confirm_server(pg_pool.clone()).await;
     //let port = listener.local_addr().unwrap().port();
-    let server = disn::server(pg_pool, listener);
+    let server = disn::server(pg_pool, chain, listener);
     // Launch the server as a background task
     // tokio::spawn returns a handle to the spawned future,
     // but we have no use for it here, hence the non-binding let

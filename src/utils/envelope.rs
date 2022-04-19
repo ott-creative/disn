@@ -15,7 +15,11 @@ pub fn generate_rsa_keypair() -> (String, String) {
 }
 
 #[allow(dead_code)]
-fn seal(issuer_pubkey: &str, holder_pubkey: &str, data: &str) -> Result<(String, String, String)> {
+pub fn seal(
+    issuer_pubkey: &str,
+    holder_pubkey: &str,
+    data: &str,
+) -> Result<(String, String, String)> {
     let mut key_iv: [u8; 48] = [0; 48];
     OsRng.fill_bytes(&mut key_iv);
     let key: &[u8] = &key_iv[..32];
@@ -40,7 +44,7 @@ fn seal(issuer_pubkey: &str, holder_pubkey: &str, data: &str) -> Result<(String,
 }
 
 #[allow(dead_code)]
-fn unseal(cipherdata: &str, eipherkey: &str, private_key: &str) -> Result<String> {
+pub fn unseal(cipherdata: &str, eipherkey: &str, private_key: &str) -> Result<String> {
     let issuer_key = base64::decode(private_key)?;
     let privkey = Rsa::private_key_from_pem(&issuer_key)?;
     let mut decrypted = vec![0; privkey.size() as usize];

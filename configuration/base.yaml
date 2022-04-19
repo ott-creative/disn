@@ -25,6 +25,5 @@ chain:
   contracts:
     -
       name: "identity"
-      address: "0xA3211777B08D672f190aD4aA06172f2EA4350EB9"
+      address: "0x76a7e650979fBeDf65dd69324673E6EB8CFe1C02"
   provider: ""
-

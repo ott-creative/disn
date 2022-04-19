@@ -180,29 +180,33 @@ mod tests {
     #[tokio::test]
     async fn send_and_query_tx() {
         let contract_name = "identity".to_string();
-        let data = uuid::Uuid::new_v4().to_string();
-        let email = format!("{}@example.com", &data);
         let configuration = get_configuration().expect("Failed to read configuration.");
         let pg_pool = PgPoolOptions::new()
-            .connect_timeout(std::time::Duration::from_secs(2))
-            .connect_with(configuration.database.with_db())
-            .await
-            .unwrap();
+        .connect_timeout(std::time::Duration::from_secs(2))
+        .connect_with(configuration.database.with_db())
+        .await
+        .unwrap();
         let server = ChainService::run_confirm_server(pg_pool).await;
+
+        let key = uuid::Uuid::new_v4().to_string();
+        let cipher_data = key.clone();
+        let pub_keys = vec![String::from("pubkey1pubkey1pubkey1pubkey1pubkey1pubkey1")];
+        let cipher_keys = vec![String::from("cipherKey1cipherKey1cipherKey1cipherKey1")];
         let _tx_hash = server
             .send_tx(
                 &contract_name,
-                "saveEvidence",
-                (email.clone(), data.clone()),
+                "saveCredential",
+                (key.clone(), cipher_data.clone(), pub_keys.clone(), cipher_keys.clone()),
             )
             .await
             .unwrap();
         std::thread::sleep(std::time::Duration::from_secs(10));
         let contract = server.contract(&contract_name).unwrap();
-        let result: String = contract
-            .query("getEvidence", email, None, Options::default(), None)
+        let (active_cipher_data, active_cipher_key): (String, String) = contract
+            .query("getCredential", (key, pub_keys[0].clone()), None, Options::default(), None)
             .await
             .unwrap();
-        assert_eq!(result, data);
+        assert_eq!(cipher_data, active_cipher_data);
+        assert_eq!(active_cipher_key, cipher_keys[0]);
     }
 }

@@ -15,9 +15,9 @@ use sqlx::PgPool;
 use std::{collections::HashMap, process::Command};
 use uuid::Uuid;
 
+use crate::CHAIN;
 use did_method_key::DIDKey;
 use didkit::{LinkedDataProofOptions, VerifiableCredential, VerifiablePresentation, JWK};
-use crate::CHAIN;
 
 pub struct CredentialService;
 

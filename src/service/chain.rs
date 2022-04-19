@@ -67,7 +67,8 @@ impl ChainService {
         let eth = self.web3.eth();
         let poll_interval = Duration::from_secs(2);
         let confirmation_check = || Self::tx_receipt_check(&eth, tx_hash_256);
-        let result = self.web3
+        let result = self
+            .web3
             .wait_for_confirmations(poll_interval, 0, confirmation_check)
             .await;
         if result.is_err() {

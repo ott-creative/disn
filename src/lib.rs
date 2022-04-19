@@ -26,18 +26,18 @@ pub mod utils;
 pub mod constants;
 
 use crate::configuration::get_configuration;
-use lazy_static::lazy_static;
 use crate::configuration::Settings;
-use sqlx::postgres::PgPoolOptions;
 use crate::service::chain::ChainService;
-
+use lazy_static::lazy_static;
+use sqlx::postgres::PgPoolOptions;
 
 lazy_static! {
     pub static ref CONFIG: Settings = get_configuration().expect("Failed to read configuration.");
     pub static ref PG_POOL: PgPool = PgPoolOptions::new()
         .connect_timeout(std::time::Duration::from_secs(2))
         .connect_lazy_with(CONFIG.database.with_db());
-    pub static ref CHAIN: ChainService = ChainService::run_confirm_server(PG_POOL.clone(), CONFIG.chain.clone());
+    pub static ref CHAIN: ChainService =
+        ChainService::run_confirm_server(PG_POOL.clone(), CONFIG.chain.clone());
 }
 
 fn app() -> impl Endpoint {

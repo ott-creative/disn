@@ -1,10 +1,10 @@
 use disn::service::vc;
+use disn::CHAIN;
+use disn::CONFIG;
+use disn::PG_POOL;
 use poem::listener::TcpListener;
 use tracing::Level;
 use tracing_subscriber::FmtSubscriber;
-use disn::PG_POOL;
-use disn::CONFIG;
-use disn::CHAIN;
 
 #[tokio::main]
 async fn main() {
@@ -25,10 +25,7 @@ async fn main() {
     // disable
     // let _ = vc::CredentialService::vc_issuer_service_restart(&pg_pool).await;
     let _ = vc::CredentialService::load_predefined_vc_issuers(&PG_POOL).await;
-    let addr = format!(
-        "{}:{}",
-        CONFIG.server.host, CONFIG.server.port
-    );
+    let addr = format!("{}:{}", CONFIG.server.host, CONFIG.server.port);
     tracing::info!("listening on {}", addr);
     let listener = TcpListener::bind(addr);
 

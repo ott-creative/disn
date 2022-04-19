@@ -362,13 +362,11 @@ impl DidApi {
     async fn vc_issuer_issue_personal_identity(
         &self,
         pool: Data<&PgPool>,
-        chain: Data<&ChainService>,
         data: Json<VcIssuePersonalIdentityData>,
         _auth: MyApiKeyAuthorization,
     ) -> VcIssuerIssueResponse {
         match CredentialService::vc_credential_issue_with_lib(
             pool.0,
-            chain.0,
             Credential {
                 holder_did: format!("did:key:{}", data.0.holder_did),
                 issuer_did: format!("did:key:{}", data.0.issuer_did),

@@ -17,6 +17,7 @@ use uuid::Uuid;
 
 use did_method_key::DIDKey;
 use didkit::{LinkedDataProofOptions, VerifiableCredential, VerifiablePresentation, JWK};
+use crate::CHAIN;
 
 pub struct CredentialService;
 
@@ -321,7 +322,6 @@ impl CredentialService {
     //. issue credential with lib access
     pub async fn vc_credential_issue_with_lib(
         pool: &PgPool,
-        chain: &ChainService,
         credential: Credential,
     ) -> Result<IssueResult> {
         // check if this issuer is running
@@ -354,7 +354,7 @@ impl CredentialService {
         )?;
 
         // submit to chain
-        let tx_hash = chain
+        let tx_hash = CHAIN
             .send_tx(
                 credential.credential.contract_name(),
                 "saveCredential",

@@ -1,11 +1,10 @@
-use disn::configuration::get_configuration;
-use disn::service::chain;
 use disn::service::vc;
 use poem::listener::TcpListener;
-use sqlx::postgres::PgPoolOptions;
-
 use tracing::Level;
 use tracing_subscriber::FmtSubscriber;
+use disn::PG_POOL;
+use disn::CONFIG;
+use disn::CHAIN;
 
 #[tokio::main]
 async fn main() {
@@ -23,24 +22,17 @@ async fn main() {
 
     tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
 
-    let configuration = get_configuration().expect("Failed to read configuration.");
-
-    let pg_pool = PgPoolOptions::new()
-        .connect_timeout(std::time::Duration::from_secs(2))
-        .connect_lazy_with(configuration.database.with_db());
-
     // disable
     // let _ = vc::CredentialService::vc_issuer_service_restart(&pg_pool).await;
-    let _ = vc::CredentialService::load_predefined_vc_issuers(&pg_pool).await;
-    let chain = chain::ChainService::run_confirm_server(pg_pool.clone()).await;
+    let _ = vc::CredentialService::load_predefined_vc_issuers(&PG_POOL).await;
     let addr = format!(
         "{}:{}",
-        configuration.server.host, configuration.server.port
+        CONFIG.server.host, CONFIG.server.port
     );
     tracing::info!("listening on {}", addr);
     let listener = TcpListener::bind(addr);
 
-    let server = disn::server(pg_pool, chain, listener);
+    let server = disn::server(listener);
 
     if let Err(err) = server.await {
         tracing::error!("server error : {:?}", err);

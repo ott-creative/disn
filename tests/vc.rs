@@ -1,4 +1,4 @@
-use disn::configuration::get_configuration;
+use disn::CONFIG;
 use std::time::Duration;
 use tokio::time::sleep;
 
@@ -6,7 +6,6 @@ mod helpers;
 
 #[tokio::test]
 async fn vc_api_works() {
-    let configuration = get_configuration().unwrap();
     let endpoint = helpers::spawn_app().await;
 
     sleep(Duration::from_millis(1000)).await;
@@ -15,7 +14,7 @@ async fn vc_api_works() {
     // create did first
     let response = client
         .post(format!("{}/did/create", endpoint))
-        .header("x-api-key", &configuration.did.api_key)
+        .header("x-api-key", &CONFIG.did.api_key)
         .send()
         .await
         .expect("Failed to execute request.");
@@ -27,7 +26,7 @@ async fn vc_api_works() {
     // create vc issuer
     let response = client
         .post(format!("{}/vc/issuer/{}/?create", endpoint, did))
-        .header("x-api-key", &configuration.did.api_key)
+        .header("x-api-key", &CONFIG.did.api_key)
         .send()
         .await
         .expect("Failed to execute request.");

@@ -29,7 +29,7 @@ Failure:
     }
 }
 */
-use crate::configuration::get_configuration;
+use crate::CONFIG;
 use poem_openapi::Object;
 
 #[derive(Debug, Serialize, Deserialize, Object)]
@@ -68,9 +68,8 @@ pub struct ApiFailure {
 
 impl Default for ApiVersion {
     fn default() -> ApiVersion {
-        let configuration = get_configuration().expect("Failed to read configuration.");
         ApiVersion {
-            api_version: configuration.api_version,
+            api_version: CONFIG.api_version.clone(),
         }
     }
 }

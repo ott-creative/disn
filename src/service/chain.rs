@@ -4,7 +4,6 @@ use crate::model::TxRecord;
 use async_recursion::async_recursion;
 use secp256k1::SecretKey;
 use secrecy::ExposeSecret;
-use sqlx::PgPool;
 use std::str::FromStr;
 use std::time::Duration;
 use std::{fs, io::Read};
@@ -21,7 +20,6 @@ use web3::{
 };
 #[derive(Clone)]
 pub struct ChainService {
-    pub pool: PgPool,
     settings: ChainSettings,
     web3: web3::Web3<Http>,
 }
@@ -40,7 +38,7 @@ impl ChainService {
         options.gas = Some(U256::from(2_000_000u64));
         let tx_hash = contract.signed_call(func, params, options, &prvk).await?;
         let tx_hash = format!("{:#x}", tx_hash);
-        TxRecord::create(tx_hash.clone(), self.pool.clone()).await?;
+        TxRecord::create(tx_hash.clone()).await?;
         let tx = tx_hash.clone();
         tokio::spawn(async move {
             self.confirm_tx(tx).await;
@@ -48,14 +46,10 @@ impl ChainService {
         Ok(tx_hash)
     }
 
-    pub fn run_confirm_server(pool: PgPool, settings: ChainSettings) -> ChainService {
+    pub fn run_confirm_server(settings: ChainSettings) -> ChainService {
         let transport = web3::transports::Http::new(&settings.provider).unwrap();
         let web3 = web3::Web3::new(transport);
-        ChainService {
-            pool,
-            settings,
-            web3,
-        }
+        ChainService { settings, web3 }
     }
 
     #[async_recursion]
@@ -84,7 +78,7 @@ impl ChainService {
         } else {
             self.retry_confirm(tx_hash.clone()).await;
         };
-        TxRecord::update_send_status(tx_hash, send_status, block_number, self.pool.clone())
+        TxRecord::update_send_status(tx_hash, send_status, block_number)
             .await
             .unwrap();
     }
@@ -134,14 +128,14 @@ mod tests {
     use crate::CHAIN;
 
     #[tokio::test]
-    async fn send_and_query_tx() {
+    async fn test_send_and_query_tx() {
         let contract_name = "identity".to_string();
 
         let key = uuid::Uuid::new_v4().to_string();
         let cipher_data = key.clone();
         let pub_keys = vec![String::from("pubkey1pubkey1pubkey1pubkey1pubkey1pubkey1")];
         let cipher_keys = vec![String::from("cipherKey1cipherKey1cipherKey1cipherKey1")];
-        let _tx_hash = CHAIN
+        let tx_hash = CHAIN
             .send_tx(
                 &contract_name,
                 "saveCredential",
@@ -154,7 +148,7 @@ mod tests {
             )
             .await
             .unwrap();
-        sleep(TokioDuration::from_secs(10)).await;
+        CHAIN.confirm_tx(tx_hash).await;
         let contract = CHAIN.contract(&contract_name).unwrap();
         let (active_cipher_data, active_cipher_key): (String, String) = contract
             .query(

@@ -1,5 +1,5 @@
 use crate::{
-    configuration::get_configuration,
+    CONFIG,
     credentials::adult_prove::CredentialAdultProve,
     error::{Error, Result},
     model::{CreatePassbaseIdentity, PassbaseIdentity},
@@ -10,8 +10,6 @@ use crate::{
 };
 use chrono::{Datelike, NaiveDate, Utc};
 use serde_json::json;
-use sqlx::PgPool;
-
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Owner {
     pub email: String,
@@ -77,16 +75,14 @@ impl PassbaseService {
         None
     }
 
-    pub async fn refresh_identity_status(pool: &PgPool, uid: &str) -> Result<()> {
-        let configuration = get_configuration().expect("Failed to read configuration.");
-
+    pub async fn refresh_identity_status(uid: &str) -> Result<()> {
         let client = reqwest::Client::new();
         let response = client
             .get(format!(
                 "https://api.passbase.com/verification/v1/identities/{}",
                 uid
             ))
-            .header("x-api-key", configuration.passbase.secret_api_key)
+            .header("x-api-key", CONFIG.passbase.secret_api_key)
             .send()
             .await
             .map_err(|e| {
@@ -106,7 +102,7 @@ impl PassbaseService {
 
         // check if we have this identity in db
         let mut identity_db: PassbaseIdentity;
-        match PassbaseIdentity::find_by_id(uid, pool).await {
+        match PassbaseIdentity::find_by_id(uid).await {
             Ok(identity) => {
                 identity_db = identity;
             }
@@ -114,7 +110,7 @@ impl PassbaseService {
                 // not exist ?
                 tracing::error!("passbase identity reading error: {:?}", e);
                 // TODO: check error type SqlxError(RowNotFound)
-                let did = DidService::did_create(pool).await?;
+                let did = DidService::did_create().await?;
                 tracing::info!("created did: {}", did);
                 let data = CreatePassbaseIdentity {
                     id: uid.to_string(),
@@ -127,7 +123,7 @@ impl PassbaseService {
                     created_at: Utc::now(),
                     updated_at: Utc::now(),
                 };
-                identity_db = PassbaseIdentity::create(data, pool).await?;
+                identity_db = PassbaseIdentity::create(data).await?;
             }
         }
 
@@ -146,7 +142,7 @@ impl PassbaseService {
                 identity_db.is_adult = Some(is_adult);
 
                 let issue_result =
-                    CredentialService::vc_credential_issue_predefined(pool, "ott", credential)
+                    CredentialService::vc_credential_issue_predefined("ott", credential)
                         .await?;
 
                 tracing::info!(
@@ -173,7 +169,7 @@ impl PassbaseService {
 
                 // update db
                 identity_db.updated_at = Utc::now();
-                let updated = PassbaseIdentity::update(identity_db, pool)
+                let updated = PassbaseIdentity::update(identity_db)
                     .await
                     .map_err(|e| {
                         tracing::error!("passbase identity update error {}", e);
@@ -199,7 +195,6 @@ impl PassbaseService {
         issuer_did: &str,
         credential: &str,
     ) -> Result<bool> {
-        let settings = get_configuration().expect("Failed to read configuration.");
         let client = reqwest::Client::new();
         let data = json!({
             "issuer_did": issuer_did,
@@ -213,7 +208,7 @@ impl PassbaseService {
         tracing::info!("passbase identity notify backend {:?}", data);
 
         let res = client
-            .post(settings.server.backend_notify_url)
+            .post(CONFIG.server.backend_notify_url)
             .json(&data)
             .send()
             .await

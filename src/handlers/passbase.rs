@@ -1,6 +1,5 @@
 use crate::service::passbase::PassbaseService;
 use poem::{handler, http::StatusCode, web::Data, web::Json};
-use sqlx::PgPool;
 use tokio::task;
 //use uuid::Uuid;
 
@@ -52,15 +51,14 @@ pub struct HookData {
 }
 
 #[handler]
-pub fn passbase_hook(pool: Data<&PgPool>, data: Json<HookData>) -> StatusCode {
+pub fn passbase_hook(data: Json<HookData>) -> StatusCode {
     tracing::info!("passbase webhook: {:?}", data);
     // TODO: security check
 
-    let pool = pool.0.clone();
     // schedule a job to process the hook
     task::spawn(async move {
         // refresh identity state
-        let _ = PassbaseService::refresh_identity_status(&pool, &data.0.key).await;
+        let _ = PassbaseService::refresh_identity_status(&data.0.key).await;
     });
 
     tracing::info!("passbase webhook return");

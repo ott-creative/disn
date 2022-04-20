@@ -2,7 +2,6 @@ use crate::response::{ApiFailure, Failure};
 use poem::{http::StatusCode, web::Json};
 use serde_json::Error as SerdeJsonError;
 use serde_json::{json, Value};
-use sqlx::PgPool;
 use std::io;
 use thiserror::Error;
 
@@ -26,8 +25,6 @@ pub enum Error {
     Web3Error(#[from] web3::Error),
     #[error(transparent)]
     EthAbiError(#[from] ethabi::Error),
-    #[error(transparent)]
-    MpscSendError(#[from] tokio::sync::mpsc::error::SendError<(String, PgPool)>),
     #[error(transparent)]
     SerdeJsonError(#[from] SerdeJsonError),
     #[error(transparent)]

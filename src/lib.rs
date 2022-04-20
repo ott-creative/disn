@@ -11,10 +11,9 @@ use poem_openapi::OpenApiService;
 
 pub mod api;
 pub mod configuration;
+pub mod credentials;
 mod dto;
 mod error;
-//mod extractors;
-pub mod credentials;
 pub mod handlers;
 pub mod model;
 mod response;
@@ -36,8 +35,7 @@ lazy_static! {
     pub static ref PG_POOL: PgPool = PgPoolOptions::new()
         .connect_timeout(std::time::Duration::from_secs(2))
         .connect_lazy_with(CONFIG.database.with_db());
-    pub static ref CHAIN: ChainService =
-        ChainService::run_confirm_server(PG_POOL.clone(), CONFIG.chain.clone());
+    pub static ref CHAIN: ChainService = ChainService::run_confirm_server(CONFIG.chain.clone());
 }
 
 fn app() -> impl Endpoint {
@@ -51,8 +49,6 @@ fn app() -> impl Endpoint {
         //.nest("/passbase", post(handlers::passbase::passbase_hook))
         .at("/spec", poem::endpoint::make_sync(move |_| spec.clone()))
         .with(Cors::new())
-        .data(PG_POOL.clone())
-        .data(CHAIN.clone())
 }
 
 /// Provide database connection, and TCP listener, this can be different in production build and test build

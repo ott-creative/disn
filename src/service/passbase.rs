@@ -1,5 +1,5 @@
 use crate::{
-    configuration::get_configuration,
+    CONFIG,
     credentials::adult_prove::CredentialAdultProve,
     error::{Error, Result},
     model::{CreatePassbaseIdentity, PassbaseIdentity},
@@ -76,15 +76,13 @@ impl PassbaseService {
     }
 
     pub async fn refresh_identity_status(uid: &str) -> Result<()> {
-        let configuration = get_configuration().expect("Failed to read configuration.");
-
         let client = reqwest::Client::new();
         let response = client
             .get(format!(
                 "https://api.passbase.com/verification/v1/identities/{}",
                 uid
             ))
-            .header("x-api-key", configuration.passbase.secret_api_key)
+            .header("x-api-key", CONFIG.passbase.secret_api_key)
             .send()
             .await
             .map_err(|e| {
@@ -197,7 +195,6 @@ impl PassbaseService {
         issuer_did: &str,
         credential: &str,
     ) -> Result<bool> {
-        let settings = get_configuration().expect("Failed to read configuration.");
         let client = reqwest::Client::new();
         let data = json!({
             "issuer_did": issuer_did,
@@ -211,7 +208,7 @@ impl PassbaseService {
         tracing::info!("passbase identity notify backend {:?}", data);
 
         let res = client
-            .post(settings.server.backend_notify_url)
+            .post(CONFIG.server.backend_notify_url)
             .json(&data)
             .send()
             .await

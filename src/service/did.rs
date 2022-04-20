@@ -1,6 +1,6 @@
-use crate::configuration::get_configuration;
 use crate::error::{Error, Result};
 use crate::utils::envelope;
+use crate::CONFIG;
 use chrono::Utc;
 use did_method_key::DIDKey;
 use didkit::{DIDMethod, Source, JWK};
@@ -39,9 +39,7 @@ impl DidService {
     }
 
     pub async fn did_resolve(did: &str) -> Result<String> {
-        let configuration = get_configuration().expect("Failed to read configuration.");
-
-        let output = Command::new(format!("{}/didkit", configuration.did.didkit_path))
+        let output = Command::new(format!("{}/didkit", CONFIG.did.didkit_path))
             .arg("did-resolve")
             .arg(did)
             .output()?;

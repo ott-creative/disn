@@ -1,10 +1,11 @@
+use crate::CONFIG;
 use chrono::{Duration, Utc};
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation};
 use secrecy::ExposeSecret;
 use uuid::Uuid;
 
 //use crate::{config::env::JWT_SECRET, error::Result};
-use crate::{configuration::get_configuration, error::Result};
+use crate::error::Result;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Claims {
@@ -27,19 +28,17 @@ impl Claims {
 }
 
 pub fn _sign(id: Uuid) -> Result<String> {
-    let configuration = get_configuration().expect("Failed to read configuration.");
     Ok(jsonwebtoken::encode(
         &Header::default(),
         &Claims::_new(id),
-        &EncodingKey::from_secret(configuration.security.jwt_secret.expose_secret().as_bytes()),
+        &EncodingKey::from_secret(CONFIG.security.jwt_secret.expose_secret().as_bytes()),
     )?)
 }
 
 pub fn _verify(token: &str) -> Result<Claims> {
-    let configuration = get_configuration().expect("Failed to read configuration.");
     Ok(jsonwebtoken::decode(
         token,
-        &DecodingKey::from_secret(configuration.security.jwt_secret.expose_secret().as_bytes()),
+        &DecodingKey::from_secret(CONFIG.security.jwt_secret.expose_secret().as_bytes()),
         &Validation::default(),
     )
     .map(|data| data.claims)?)

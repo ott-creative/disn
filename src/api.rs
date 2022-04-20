@@ -1,16 +1,15 @@
-use crate::configuration::get_configuration;
 use crate::service::{
-    chain::ChainService,
     did::DidService,
     vc::{Credential, CredentialService, Credentials},
 };
-use poem::{web::Data, Request};
+use poem::Request;
 use poem_openapi::{
     auth::ApiKey, param::Path, payload::Json, ApiResponse, Enum, Object, OpenApi, SecurityScheme,
 };
 use serde_json::Value;
 
 pub struct DidApi;
+use crate::CONFIG;
 
 /// ApiKey authorization
 #[derive(SecurityScheme)]
@@ -25,8 +24,7 @@ struct MyApiKeyAuthorization(());
 async fn api_checker(_req: &Request, api_key: ApiKey) -> Option<()> {
     //let server_key = req.data::<ServerKey>().unwrap();
     //VerifyWithKey::<()>::verify_with_key(api_key.key.as_str(), server_key).ok()
-    let configuration = get_configuration().expect("Failed to read configuration.");
-    if api_key.key.eq(&configuration.did.api_key) {
+    if api_key.key.eq(&CONFIG.did.api_key) {
         Some(())
     } else {
         None
@@ -377,7 +375,6 @@ impl DidApi {
     #[oai(path = "/vc/decrypt", method = "post")]
     async fn vc_credential_decrypt(
         &self,
-        _chain: Data<&ChainService>,
         data: Json<VcDecryptData>,
         _auth: MyApiKeyAuthorization,
     ) -> VcDecryptResponse {
@@ -396,12 +393,10 @@ impl DidApi {
     #[oai(path = "/vc/verify", method = "post")]
     async fn vc_issuer_credential_verify(
         &self,
-        chain: Data<&ChainService>,
         data: Json<VcIssueVerifyData>,
         _auth: MyApiKeyAuthorization,
     ) -> VcIssuerVerifyResponse {
         match CredentialService::vc_credential_verify_with_lib(
-            chain.0,
             &format!("did:key:{}", data.0.issuer_did),
             data.0.credential,
         )

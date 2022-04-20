@@ -1,13 +1,13 @@
 use crate::{
-    configuration::get_configuration,
     credentials::{
         adult_prove::CredentialAdultProve, personal_identity::CredentialPersonalIdentity,
         VerifiableCredential as VC,
     },
     error::{Error, Result},
     model::{CreateVcIssuerData, UpdateVcIssuerData, VcIssuer},
-    service::{chain::ChainService, did::DidService},
+    service::did::DidService,
     utils::envelope,
+    CONFIG,
 };
 use chrono::Utc;
 use serde_json::{json, Value};
@@ -139,8 +139,7 @@ impl CredentialService {
 
     /// get available service address(port)
     pub async fn vc_issuer_get_available_port() -> Result<u16> {
-        let settings = get_configuration().expect("Failed to read configuration.");
-        let mut port = settings.did.vc_issuer_port_start;
+        let mut port = CONFIG.did.vc_issuer_port_start;
         let issuers = VcIssuer::find_all().await?;
         if issuers.len() > 0 && issuers[0].service_address > 0 {
             port = (issuers[0].service_address + 1) as u16;
@@ -176,8 +175,7 @@ impl CredentialService {
         tracing::info!("assign vc issuer port: {}", issuer.service_address);
 
         // start didkit-http service
-        let settings = get_configuration().expect("Failed to read configuration.");
-        let mut run_didhttp = Command::new(format!("{}/didkit-http", settings.did.didkit_path));
+        let mut run_didhttp = Command::new(format!("{}/didkit-http", CONFIG.did.didkit_path));
         run_didhttp.arg("-p");
         run_didhttp.arg(issuer.service_address.to_string());
         run_didhttp.arg("-j");
@@ -443,7 +441,6 @@ impl CredentialService {
     }
 
     pub async fn vc_credential_verify_with_lib(
-        _chain: &ChainService,
         issuer_did: &str,
         signed_credential: String,
     ) -> Result<bool> {
@@ -474,15 +471,14 @@ impl CredentialService {
 
     /// init pre-defined vc issuer, this should be called when system start
     pub async fn load_predefined_vc_issuers() -> Result<()> {
-        let settings = get_configuration().expect("Failed to read configuration.");
-        let names: Vec<&str> = settings.did.predefined_issuers.split(",").collect();
+        let names: Vec<&str> = CONFIG.did.predefined_issuers.split(",").collect();
 
         let mut hashed = HashMap::new();
         for name in names {
             hashed.insert(name.to_string(), false);
         }
 
-        match VcIssuer::find_by_names(settings.did.predefined_issuers.split(",").collect()).await {
+        match VcIssuer::find_by_names(CONFIG.did.predefined_issuers.split(",").collect()).await {
             Ok(issuers) => {
                 // start issuers
                 for issuer in issuers {

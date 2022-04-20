@@ -71,9 +71,9 @@ impl ChainService {
         if let Ok(Some(receipt)) = receipt_result {
             if receipt.status == Some(1u64.into()) {
                 send_status = 1;
-                if let Some(read_block_number) = receipt.block_number {
-                    block_number = Some(read_block_number.low_u64() as i64);
-                }
+            }
+            if let Some(read_block_number) = receipt.block_number {
+                block_number = Some(read_block_number.low_u64() as i64);
             }
         } else {
             self.retry_confirm(tx_hash.clone()).await;

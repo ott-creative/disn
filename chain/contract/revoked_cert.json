@@ -1,0 +1,177 @@
+[
+  {
+    "inputs": [],
+    "stateMutability": "nonpayable",
+    "type": "constructor"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "string",
+        "name": "certNo",
+        "type": "string"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "revokedTime",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "bytes32",
+        "name": "certType",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "issuer",
+        "type": "string"
+      }
+    ],
+    "name": "RevokeCert",
+    "type": "event"
+  },
+  {
+    "inputs": [],
+    "name": "adminCount",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function",
+    "constant": true
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "admins",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function",
+    "constant": true
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "",
+        "type": "string"
+      }
+    ],
+    "name": "revokedCerts",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "isAcitve",
+        "type": "bool"
+      },
+      {
+        "internalType": "uint256",
+        "name": "revokedTime",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "certType",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "string",
+        "name": "issuer",
+        "type": "string"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function",
+    "constant": true
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "revokedTime",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "certType",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "string",
+        "name": "certNo",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "issuer",
+        "type": "string"
+      }
+    ],
+    "name": "revoke",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "certNo",
+        "type": "string"
+      }
+    ],
+    "name": "getRevokedInfo",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "bool",
+            "name": "isAcitve",
+            "type": "bool"
+          },
+          {
+            "internalType": "uint256",
+            "name": "revokedTime",
+            "type": "uint256"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "certType",
+            "type": "bytes32"
+          },
+          {
+            "internalType": "string",
+            "name": "issuer",
+            "type": "string"
+          }
+        ],
+        "internalType": "struct RevokedCert.RevokedInfo",
+        "name": "",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function",
+    "constant": true
+  }
+]

@@ -26,4 +26,7 @@ chain:
     -
       name: "identity"
       address: "0x76a7e650979fBeDf65dd69324673E6EB8CFe1C02"
+    -
+      name: "revoked_cert"
+      address: "0xF1112F3A59034AE704CBD1a7d936B8fD8EC94b94"
   provider: ""

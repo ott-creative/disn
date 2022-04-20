@@ -1,5 +1,4 @@
 use chrono::Utc;
-use sqlx::PgPool;
 
 use crate::{
     dto::{LoginInput, RegisterInput},
@@ -11,8 +10,8 @@ use crate::{
 pub struct AuthService;
 
 impl AuthService {
-    pub async fn sign_in(input: LoginInput, pool: &PgPool) -> Result<User> {
-        let user = User::find_by_email(&input.email, &pool).await?;
+    pub async fn sign_in(input: LoginInput) -> Result<User> {
+        let user = User::find_by_email(&input.email).await?;
         if encryption::verify_password(input.password, user.password.to_owned()).await? {
             Ok(user)
         } else {
@@ -20,11 +19,11 @@ impl AuthService {
         }
     }
 
-    pub async fn sign_up(input: RegisterInput, pool: &PgPool) -> Result<User> {
-        if User::find_by_email(&input.email, &pool).await.is_ok() {
+    pub async fn sign_up(input: RegisterInput) -> Result<User> {
+        if User::find_by_email(&input.email).await.is_ok() {
             return Err(Error::DuplicateUserEmail);
         }
-        if User::find_by_name(&input.name, &pool).await.is_ok() {
+        if User::find_by_name(&input.name).await.is_ok() {
             return Err(Error::DuplicateUserName);
         }
 
@@ -35,6 +34,6 @@ impl AuthService {
             created_at: Utc::now(),
             updated_at: Utc::now(),
         };
-        Ok(User::create(data, &pool).await?)
+        Ok(User::create(data).await?)
     }
 }

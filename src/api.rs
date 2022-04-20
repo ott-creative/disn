@@ -9,7 +9,6 @@ use poem_openapi::{
     auth::ApiKey, param::Path, payload::Json, ApiResponse, Enum, Object, OpenApi, SecurityScheme,
 };
 use serde_json::Value;
-use sqlx::PgPool;
 
 pub struct DidApi;
 
@@ -249,12 +248,8 @@ pub struct PersonalVerificationResult {
 impl DidApi {
     /// Create did
     #[oai(path = "/did/create", method = "post")]
-    async fn did_create(
-        &self,
-        pool: Data<&PgPool>,
-        _auth: MyApiKeyAuthorization,
-    ) -> DidCreateResponse {
-        match DidService::did_create(pool.0).await {
+    async fn did_create(&self, _auth: MyApiKeyAuthorization) -> DidCreateResponse {
+        match DidService::did_create().await {
             Ok(did) => DidCreateResponse::Ok(Json(did)),
             _ => DidCreateResponse::CreateFail,
         }
@@ -264,7 +259,6 @@ impl DidApi {
     #[oai(path = "/did/resolve/:id", method = "get")]
     async fn did_resolve(
         &self,
-        _pool: Data<&PgPool>,
         id: Path<String>,
         _auth: MyApiKeyAuthorization,
     ) -> DidResolveResponse {
@@ -278,11 +272,10 @@ impl DidApi {
     #[oai(path = "/vc/issuer/:did/status", method = "get")]
     async fn vc_issuer_status(
         &self,
-        pool: Data<&PgPool>,
         did: Path<String>,
         _auth: MyApiKeyAuthorization,
     ) -> VcIssuerStatusResponse {
-        match CredentialService::vc_issuer_get_by_did(pool.0, &format!("did:key:{}", did.0)).await {
+        match CredentialService::vc_issuer_get_by_did(&format!("did:key:{}", did.0)).await {
             Ok(vc_issuer) => VcIssuerStatusResponse::Ok(Json(vc_issuer.status.to_string())),
             _ => VcIssuerStatusResponse::QueryFail,
         }
@@ -293,11 +286,10 @@ impl DidApi {
     async fn vc_issuer_create(
         &self,
         data: Json<VcIssuerCreateData>,
-        pool: Data<&PgPool>,
         _auth: MyApiKeyAuthorization,
     ) -> VcIssuerOperateResponse {
         let did = format!("did:key:{}", data.0.did);
-        match CredentialService::vc_issuer_create(pool.0, &did, &data.0.name).await {
+        match CredentialService::vc_issuer_create(&did, &data.0.name).await {
             Ok(()) => VcIssuerOperateResponse::Ok(Json("OK".to_string())),
             Err(err) => VcIssuerOperateResponse::OperateFail(Json(err.to_string())),
         }
@@ -308,25 +300,24 @@ impl DidApi {
     async fn vc_issuer_operate(
         &self,
         data: Json<VcIssuerOperateData>,
-        pool: Data<&PgPool>,
         _auth: MyApiKeyAuthorization,
     ) -> VcIssuerOperateResponse {
         let did = format!("did:key:{}", data.0.did);
         match data.0.operation {
             VcIssuerOperate::Run => {
-                match CredentialService::vc_issuer_service_run(pool.0, &did, false).await {
+                match CredentialService::vc_issuer_service_run(&did, false).await {
                     Ok(()) => VcIssuerOperateResponse::Ok(Json("OK".to_string())),
                     Err(err) => VcIssuerOperateResponse::OperateFail(Json(err.to_string())),
                 }
             }
             VcIssuerOperate::Restart => {
-                match CredentialService::vc_issuer_service_run(pool.0, &did, true).await {
+                match CredentialService::vc_issuer_service_run(&did, true).await {
                     Ok(()) => VcIssuerOperateResponse::Ok(Json("OK".to_string())),
                     Err(err) => VcIssuerOperateResponse::OperateFail(Json(err.to_string())),
                 }
             }
             VcIssuerOperate::Disable => {
-                match CredentialService::vc_issuer_service_disable(pool.0, &did).await {
+                match CredentialService::vc_issuer_service_disable(&did).await {
                     Ok(()) => VcIssuerOperateResponse::Ok(Json("OK".to_string())),
                     Err(err) => VcIssuerOperateResponse::OperateFail(Json(err.to_string())),
                 }
@@ -337,12 +328,10 @@ impl DidApi {
         #[oai(path = "/vc/issue/adult_prove", method = "post")]
         async fn vc_issuer_credential_issue(
             &self,
-            pool: Data<&PgPool>,
             data: Json<VcIssueAdultProveData>,
             _auth: MyApiKeyAuthorization,
         ) -> VcIssuerIssueResponse {
             match CredentialService::vc_credential_issue_with_lib(
-                pool.0,
                 Credential {
                     holder_did: format!("did:key:{}", data.0.holder_did),
                     issuer_did: format!("did:key:{}", data.0.issuer_did),
@@ -363,19 +352,15 @@ impl DidApi {
     #[oai(path = "/vc/issue/personal-identity", method = "post")]
     async fn vc_issuer_issue_personal_identity(
         &self,
-        pool: Data<&PgPool>,
         data: Json<VcIssuePersonalIdentityData>,
         _auth: MyApiKeyAuthorization,
     ) -> VcIssuerIssueResponse {
-        match CredentialService::vc_credential_issue_with_lib(
-            pool.0,
-            Credential {
-                holder_did: format!("did:key:{}", data.0.holder_did),
-                issuer_did: format!("did:key:{}", data.0.issuer_did),
+        match CredentialService::vc_credential_issue_with_lib(Credential {
+            holder_did: format!("did:key:{}", data.0.holder_did),
+            issuer_did: format!("did:key:{}", data.0.issuer_did),
 
-                credential: Credentials::PersonalIdentity(data.0.result.into()),
-            },
-        )
+            credential: Credentials::PersonalIdentity(data.0.result.into()),
+        })
         .await
         {
             Ok(signed) => VcIssuerIssueResponse::Ok(Json(VcIssueResult {
@@ -392,13 +377,11 @@ impl DidApi {
     #[oai(path = "/vc/decrypt", method = "post")]
     async fn vc_credential_decrypt(
         &self,
-        pool: Data<&PgPool>,
         _chain: Data<&ChainService>,
         data: Json<VcDecryptData>,
         _auth: MyApiKeyAuthorization,
     ) -> VcDecryptResponse {
         match CredentialService::vc_credential_decrypt(
-            pool.0,
             &format!("did:key:{}", data.0.did),
             &data.0.encrypted,
             &data.0.cipher,
@@ -413,13 +396,11 @@ impl DidApi {
     #[oai(path = "/vc/verify", method = "post")]
     async fn vc_issuer_credential_verify(
         &self,
-        pool: Data<&PgPool>,
         chain: Data<&ChainService>,
         data: Json<VcIssueVerifyData>,
         _auth: MyApiKeyAuthorization,
     ) -> VcIssuerVerifyResponse {
         match CredentialService::vc_credential_verify_with_lib(
-            pool.0,
             chain.0,
             &format!("did:key:{}", data.0.issuer_did),
             data.0.credential,
@@ -434,12 +415,10 @@ impl DidApi {
     #[oai(path = "/vp/presentation", method = "post")]
     async fn vp_presentation(
         &self,
-        pool: Data<&PgPool>,
         data: Json<VpPresentationData>,
         _auth: MyApiKeyAuthorization,
     ) -> VpPresentationResponse {
         match CredentialService::vp_presentation(
-            pool.0,
             &format!("did:key:{}", data.0.holder_did),
             &data.0.credential,
         )
@@ -453,11 +432,10 @@ impl DidApi {
     #[oai(path = "/vp/verify", method = "post")]
     async fn vp_verify(
         &self,
-        pool: Data<&PgPool>,
         data: Json<VpVerifyData>,
         _auth: MyApiKeyAuthorization,
     ) -> VpVerifyResponse {
-        match CredentialService::vp_verify(pool.0, data.0.presentation).await {
+        match CredentialService::vp_verify(data.0.presentation).await {
             Ok(_signed) => VpVerifyResponse::Ok(Json("OK".to_string())),
             Err(err) => VpVerifyResponse::VerifyFail(Json(err.to_string())),
         }

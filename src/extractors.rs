@@ -23,10 +23,7 @@ where
             TypedHeader::<Authorization<Bearer>>::from_request(req)
                 .await
                 .map_err(|err| Error::from(err))?;
-        let Extension(pool) = Extension::<PgPool>::from_request(req)
-            .await
-            .map_err(|err| Error::from(err))?;
         let claims = jwt::verify(bearer.token())?;
-        Ok(User::find_by_id(claims.sub, &pool).await?)
+        Ok(User::find_by_id(claims.sub).await?)
     }
 }

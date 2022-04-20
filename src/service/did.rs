@@ -4,7 +4,6 @@ use crate::utils::envelope;
 use chrono::Utc;
 use did_method_key::DIDKey;
 use didkit::{DIDMethod, Source, JWK};
-use sqlx::PgPool;
 use std::process::Command;
 
 pub struct DidService;
@@ -12,7 +11,7 @@ pub struct DidService;
 use crate::model::{CreateDidData, Did};
 
 impl DidService {
-    pub async fn did_create(pool: &PgPool) -> Result<String> {
+    pub async fn did_create() -> Result<String> {
         // create jwk, a static step
         let jwk = JWK::generate_ed25519().map_err(|err| Error::from(err))?;
         // jwk to did-key
@@ -35,7 +34,7 @@ impl DidService {
             updated_at: Utc::now(),
         };
 
-        Did::create(data, &pool).await?;
+        Did::create(data).await?;
         Ok(did)
     }
 

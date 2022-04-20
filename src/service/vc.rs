@@ -11,7 +11,6 @@ use crate::{
 };
 use chrono::Utc;
 use serde_json::{json, Value};
-use sqlx::PgPool;
 use std::{collections::HashMap, process::Command};
 use uuid::Uuid;
 
@@ -123,7 +122,7 @@ fn build_unsigned_vp(holder_did: &str, signed_credential: Value) -> Value {
 
 impl CredentialService {
     /// create a new vc issuer
-    pub async fn vc_issuer_create(pool: &PgPool, did: &str, name: &str) -> Result<()> {
+    pub async fn vc_issuer_create(did: &str, name: &str) -> Result<()> {
         let data = CreateVcIssuerData {
             did: did.to_string(),
             name: name.to_string(),
@@ -133,16 +132,16 @@ impl CredentialService {
             status: CredentialServiceStatus::Created.into(),
         };
 
-        VcIssuer::create(data, &pool).await?;
+        VcIssuer::create(data).await?;
 
         Ok(())
     }
 
     /// get available service address(port)
-    pub async fn vc_issuer_get_available_port(pool: &PgPool) -> Result<u16> {
+    pub async fn vc_issuer_get_available_port() -> Result<u16> {
         let settings = get_configuration().expect("Failed to read configuration.");
         let mut port = settings.did.vc_issuer_port_start;
-        let issuers = VcIssuer::find_all(&pool).await?;
+        let issuers = VcIssuer::find_all().await?;
         if issuers.len() > 0 && issuers[0].service_address > 0 {
             port = (issuers[0].service_address + 1) as u16;
         }
@@ -151,26 +150,26 @@ impl CredentialService {
     }
 
     /// get vc issuer by did
-    pub async fn vc_issuer_get_by_did(pool: &PgPool, did: &str) -> Result<VcIssuer> {
-        VcIssuer::find_by_did(did, pool).await
+    pub async fn vc_issuer_get_by_did(did: &str) -> Result<VcIssuer> {
+        VcIssuer::find_by_did(did).await
     }
 
     /// start vc issuer service
-    pub async fn vc_issuer_service_run(pool: &PgPool, did: &str, force_start: bool) -> Result<()> {
+    pub async fn vc_issuer_service_run(did: &str, force_start: bool) -> Result<()> {
         tracing::info!("Try to run vc issuer: {}", did);
         // read vc issuer, check if it's running
-        let mut issuer = VcIssuer::find_by_did(did, &pool).await?;
+        let mut issuer = VcIssuer::find_by_did(did).await?;
         if !force_start && issuer.status == CredentialServiceStatus::Running as i32 {
             tracing::info!("Issuer {} already running", did);
             return Ok(());
         }
 
         // read out related private key
-        let did_instance = Did::find_by_id(did, pool).await?;
+        let did_instance = Did::find_by_id(did).await?;
 
         // check if can get available port
         if issuer.service_address == 0 {
-            let port = CredentialService::vc_issuer_get_available_port(pool).await?;
+            let port = CredentialService::vc_issuer_get_available_port().await?;
             issuer.service_address = port as i32;
         }
 
@@ -194,7 +193,7 @@ impl CredentialService {
                     pid: Some(child.id() as i32),
                     service_address: issuer.service_address,
                 };
-                VcIssuer::update(data, &pool).await?;
+                VcIssuer::update(data).await?;
                 Ok(())
             }
             Err(e) => {
@@ -205,9 +204,9 @@ impl CredentialService {
     }
 
     /// stop vc issuer service
-    pub async fn vc_issuer_service_disable(pool: &PgPool, did: &str) -> Result<()> {
+    pub async fn vc_issuer_service_disable(did: &str) -> Result<()> {
         // read vc issuer, check if it's running
-        let issuer = VcIssuer::find_by_did(did, &pool).await?;
+        let issuer = VcIssuer::find_by_did(did).await?;
         if issuer.status == CredentialServiceStatus::Disabled as i32 {
             tracing::info!("Issuer {} already stopped", did);
             return Ok(());
@@ -234,17 +233,17 @@ impl CredentialService {
             service_address: issuer.service_address,
         };
 
-        VcIssuer::update(data, &pool).await?;
+        VcIssuer::update(data).await?;
 
         Ok(())
     }
 
     /// restart all vc issuers which db status is running
-    pub async fn vc_issuer_service_restart(pool: &PgPool) -> Result<()> {
-        let issuers = VcIssuer::find_all(&pool).await?;
+    pub async fn vc_issuer_service_restart() -> Result<()> {
+        let issuers = VcIssuer::find_all().await?;
         for issuer in issuers {
             if issuer.status == CredentialServiceStatus::Running as i32 {
-                CredentialService::vc_issuer_service_run(&pool, &issuer.did, true).await?;
+                CredentialService::vc_issuer_service_run(&issuer.did, true).await?;
             }
         }
 
@@ -253,9 +252,9 @@ impl CredentialService {
 
     /*
         /// issue credential
-        pub async fn vc_credential_issue(pool: &PgPool, credential: Credential) -> Result<IssueResult> {
+        pub async fn vc_credential_issue( credential: Credential) -> Result<IssueResult> {
             // check if this issuer is running
-            let issuer = VcIssuer::find_by_did(&credential.issuer_did, &pool).await?;
+            let issuer = VcIssuer::find_by_did(&credential.issuer_did).await?;
             if issuer.status != CredentialServiceStatus::Running as i32 {
                 tracing::info!("Issuer {} not running", &credential.issuer_did);
                 return Err(Error::VcIssuerNotRunning);
@@ -321,15 +320,12 @@ impl CredentialService {
         }
     */
     //. issue credential with lib access
-    pub async fn vc_credential_issue_with_lib(
-        pool: &PgPool,
-        credential: Credential,
-    ) -> Result<IssueResult> {
+    pub async fn vc_credential_issue_with_lib(credential: Credential) -> Result<IssueResult> {
         // check if this issuer is running
         // TODO: join query
-        let issuer = VcIssuer::find_by_did(&credential.issuer_did, &pool).await?;
-        let issuer_did = Did::find_by_id(&issuer.did, pool).await?;
-        let holder_did = Did::find_by_id(&credential.holder_did, pool).await?;
+        let issuer = VcIssuer::find_by_did(&credential.issuer_did).await?;
+        let issuer_did = Did::find_by_id(&issuer.did).await?;
+        let holder_did = Did::find_by_id(&credential.holder_did).await?;
 
         let credential_unsigned = credential
             .credential
@@ -380,24 +376,15 @@ impl CredentialService {
     }
 
     /// decrypt credential
-    pub async fn vc_credential_decrypt(
-        pool: &PgPool,
-        did: &str,
-        encrypted: &str,
-        cipher: &str,
-    ) -> Result<String> {
-        let owner = Did::find_by_id(did, pool).await?;
+    pub async fn vc_credential_decrypt(did: &str, encrypted: &str, cipher: &str) -> Result<String> {
+        let owner = Did::find_by_id(did).await?;
         envelope::unseal(encrypted, cipher, &owner.encrypt_private_key)
     }
 
     /// verify credential
-    pub async fn vc_credential_verify(
-        pool: &PgPool,
-        issuer_did: &str,
-        signed_credential: String,
-    ) -> Result<bool> {
+    pub async fn vc_credential_verify(issuer_did: &str, signed_credential: String) -> Result<bool> {
         // check if this issuer is running
-        let issuer = VcIssuer::find_by_did(issuer_did, &pool).await?;
+        let issuer = VcIssuer::find_by_did(issuer_did).await?;
         if issuer.status != CredentialServiceStatus::Running as i32 {
             tracing::info!("Issuer {} not running", issuer_did);
             return Err(Error::VcIssuerNotRunning);
@@ -456,12 +443,11 @@ impl CredentialService {
     }
 
     pub async fn vc_credential_verify_with_lib(
-        pool: &PgPool,
         _chain: &ChainService,
         issuer_did: &str,
         signed_credential: String,
     ) -> Result<bool> {
-        let _issuer = VcIssuer::find_by_did(issuer_did, &pool).await?;
+        let _issuer = VcIssuer::find_by_did(issuer_did).await?;
         let credential: Value = serde_json::from_str(&signed_credential).map_err(|e| {
             tracing::error!("vc verify {} failed to parse credential: {}", issuer_did, e);
             Error::VcVerifyParserJsonError
@@ -487,7 +473,7 @@ impl CredentialService {
     }
 
     /// init pre-defined vc issuer, this should be called when system start
-    pub async fn load_predefined_vc_issuers(pool: &PgPool) -> Result<()> {
+    pub async fn load_predefined_vc_issuers() -> Result<()> {
         let settings = get_configuration().expect("Failed to read configuration.");
         let names: Vec<&str> = settings.did.predefined_issuers.split(",").collect();
 
@@ -496,13 +482,11 @@ impl CredentialService {
             hashed.insert(name.to_string(), false);
         }
 
-        match VcIssuer::find_by_names(settings.did.predefined_issuers.split(",").collect(), &pool)
-            .await
-        {
+        match VcIssuer::find_by_names(settings.did.predefined_issuers.split(",").collect()).await {
             Ok(issuers) => {
                 // start issuers
                 for issuer in issuers {
-                    // CredentialService::vc_issuer_service_run(&pool, &issuer.did, false).await?;
+                    // CredentialService::vc_issuer_service_run(&issuer.did, false).await?;
                     hashed.remove(&issuer.name);
                 }
             }
@@ -515,9 +499,9 @@ impl CredentialService {
 
         for name in hashed.keys() {
             tracing::info!("try to create issuer: {}", name);
-            let did = DidService::did_create(pool).await?;
-            CredentialService::vc_issuer_create(pool, &did, name).await?;
-            // CredentialService::vc_issuer_service_run(pool, &did, true).await?;
+            let did = DidService::did_create().await?;
+            CredentialService::vc_issuer_create(&did, name).await?;
+            // CredentialService::vc_issuer_service_run(&did, true).await?;
         }
 
         Ok(())
@@ -525,28 +509,24 @@ impl CredentialService {
 
     /// use predefined vc issuer to issue credential
     /*pub async fn vc_credential_issue_predefined(
-        pool: &PgPool,
+
         issuer_name: &str,
         mut credential: Credential,
     ) -> Result<IssueResult> {
         // check if this issuer is running
-        let issuer = VcIssuer::find_by_name(issuer_name, &pool).await?;
+        let issuer = VcIssuer::find_by_name(issuer_name).await?;
         if issuer.status != CredentialServiceStatus::Running as i32 {
             tracing::info!("Issuer {} not running, try to start...", issuer_name);
-            CredentialService::vc_issuer_service_run(&pool, &issuer.did, true).await?;
+            CredentialService::vc_issuer_service_run(&issuer.did, true).await?;
         }
 
         // override issuer did
         credential.issuer_did = issuer.did.clone();
-        CredentialService::vc_credential_issue_with_lib(pool, credential).await
+        CredentialService::vc_credential_issue_with_lib(credential).await
     }*/
 
-    pub async fn vp_presentation(
-        pool: &PgPool,
-        holder: &str,
-        signed_credential: &str,
-    ) -> Result<String> {
-        let holder_did = Did::find_by_id(holder, pool).await?;
+    pub async fn vp_presentation(holder: &str, signed_credential: &str) -> Result<String> {
+        let holder_did = Did::find_by_id(holder).await?;
 
         let credential: Value = serde_json::from_str(signed_credential).map_err(|e| {
             tracing::error!("vc presentation issue failed to parse credential: {}", e);
@@ -569,7 +549,7 @@ impl CredentialService {
         Ok(String::from_utf8(signed_presentation)?)
     }
 
-    pub async fn vp_verify(_pool: &PgPool, signed_presentation: String) -> Result<bool> {
+    pub async fn vp_verify(signed_presentation: String) -> Result<bool> {
         let presentation: Value = serde_json::from_str(&signed_presentation).map_err(|e| {
             tracing::error!("vp verify failed to parse credential: {}", e);
             Error::VcVerifyParserJsonError

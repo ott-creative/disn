@@ -37,7 +37,7 @@ impl ChainService {
             .expect("Failed to parse private key");
         let contract = self.contract(contract)?;
         let mut options = Options::default();
-        options.gas = Some(U256::from(1_000_000u64));
+        options.gas = Some(U256::from(2_000_000u64));
         let tx_hash = contract.signed_call(func, params, options, &prvk).await?;
         let tx_hash = format!("{:#x}", tx_hash);
         TxRecord::create(tx_hash.clone(), self.pool.clone()).await?;

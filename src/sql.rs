@@ -66,10 +66,7 @@ impl TxRecord {
 impl User {
     pub async fn find_by_id(id: Uuid) -> Result<User> {
         let sql = format!("SELECT * FROM {} WHERE id = $1 LIMIT 1", User::TABLE);
-        Ok(sqlx::query_as(&sql)
-            .bind(id)
-            .fetch_one(&*PG_POOL)
-            .await?)
+        Ok(sqlx::query_as(&sql).bind(id).fetch_one(&*PG_POOL).await?)
     }
 
     pub async fn find_by_email(email: &str) -> Result<User> {
@@ -82,10 +79,7 @@ impl User {
 
     pub async fn find_by_name(name: &str) -> Result<User> {
         let sql = format!("SELECT * FROM {} WHERE name = $1 LIMIT 1", User::TABLE);
-        Ok(sqlx::query_as(&sql)
-            .bind(name)
-            .fetch_one(&*PG_POOL)
-            .await?)
+        Ok(sqlx::query_as(&sql).bind(name).fetch_one(&*PG_POOL).await?)
     }
 
     pub async fn create(data: CreateUserData) -> Result<User> {
@@ -119,18 +113,12 @@ impl VcIssuer {
 
     pub async fn find_by_did(did: &str) -> Result<VcIssuer> {
         let sql = format!("SELECT * FROM {} WHERE did = $1 LIMIT 1", VcIssuer::TABLE);
-        Ok(sqlx::query_as(&sql)
-            .bind(did)
-            .fetch_one(&*PG_POOL)
-            .await?)
+        Ok(sqlx::query_as(&sql).bind(did).fetch_one(&*PG_POOL).await?)
     }
 
     pub async fn find_by_name(name: &str) -> Result<VcIssuer> {
         let sql = format!("SELECT * FROM {} WHERE name = $1 LIMIT 1", VcIssuer::TABLE);
-        Ok(sqlx::query_as(&sql)
-            .bind(name)
-            .fetch_one(&*PG_POOL)
-            .await?)
+        Ok(sqlx::query_as(&sql).bind(name).fetch_one(&*PG_POOL).await?)
     }
 
     pub async fn find_by_names(names: Vec<&str>) -> Result<Vec<VcIssuer>> {
@@ -212,10 +200,7 @@ impl Did {
 
     pub async fn find_by_id(id: &str) -> Result<Did> {
         let sql = format!("SELECT * FROM {} WHERE id = $1 LIMIT 1", Did::TABLE);
-        Ok(sqlx::query_as(&sql)
-            .bind(id)
-            .fetch_one(&*PG_POOL)
-            .await?)
+        Ok(sqlx::query_as(&sql).bind(id).fetch_one(&*PG_POOL).await?)
     }
 }
 

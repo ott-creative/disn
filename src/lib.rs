@@ -11,9 +11,9 @@ use poem_openapi::OpenApiService;
 
 pub mod api;
 pub mod configuration;
+pub mod credentials;
 mod dto;
 mod error;
-pub mod credentials;
 pub mod handlers;
 pub mod model;
 mod response;

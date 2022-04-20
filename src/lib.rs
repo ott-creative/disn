@@ -13,7 +13,6 @@ pub mod api;
 pub mod configuration;
 mod dto;
 mod error;
-//mod extractors;
 pub mod credentials;
 pub mod handlers;
 pub mod model;

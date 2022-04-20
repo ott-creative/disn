@@ -128,14 +128,14 @@ mod tests {
     use crate::CHAIN;
 
     #[tokio::test]
-    async fn send_and_query_tx() {
+    async fn test_send_and_query_tx() {
         let contract_name = "identity".to_string();
 
         let key = uuid::Uuid::new_v4().to_string();
         let cipher_data = key.clone();
         let pub_keys = vec![String::from("pubkey1pubkey1pubkey1pubkey1pubkey1pubkey1")];
         let cipher_keys = vec![String::from("cipherKey1cipherKey1cipherKey1cipherKey1")];
-        let _tx_hash = CHAIN
+        let tx_hash = CHAIN
             .send_tx(
                 &contract_name,
                 "saveCredential",
@@ -148,7 +148,7 @@ mod tests {
             )
             .await
             .unwrap();
-        sleep(TokioDuration::from_secs(10)).await;
+        CHAIN.confirm_tx(tx_hash).await;
         let contract = CHAIN.contract(&contract_name).unwrap();
         let (active_cipher_data, active_cipher_key): (String, String) = contract
             .query(

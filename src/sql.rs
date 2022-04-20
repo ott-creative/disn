@@ -24,7 +24,7 @@ impl TxRecord {
             .bind(tx_hash)
             .bind(Utc::now())
             .bind(Utc::now())
-            .fetch_one(&PG_POOL.clone())
+            .fetch_one(&*PG_POOL)
             .await?)
     }
 
@@ -34,7 +34,7 @@ impl TxRecord {
             TxRecord::TABLE,
             send_status
         );
-        Ok(sqlx::query_as(&sql).fetch_all(&PG_POOL.clone()).await?)
+        Ok(sqlx::query_as(&sql).fetch_all(&*PG_POOL).await?)
     }
 
     pub async fn update_send_status(
@@ -58,7 +58,7 @@ impl TxRecord {
             .bind(send_status)
             .bind(block_number)
             .bind(Utc::now())
-            .fetch_one(&PG_POOL.clone())
+            .fetch_one(&*PG_POOL)
             .await?)
     }
 }
@@ -68,7 +68,7 @@ impl User {
         let sql = format!("SELECT * FROM {} WHERE id = $1 LIMIT 1", User::TABLE);
         Ok(sqlx::query_as(&sql)
             .bind(id)
-            .fetch_one(&PG_POOL.clone())
+            .fetch_one(&*PG_POOL)
             .await?)
     }
 
@@ -76,7 +76,7 @@ impl User {
         let sql = format!("SELECT * FROM {} WHERE email = $1 LIMIT 1", User::TABLE);
         Ok(sqlx::query_as(&sql)
             .bind(email)
-            .fetch_one(&PG_POOL.clone())
+            .fetch_one(&*PG_POOL)
             .await?)
     }
 
@@ -84,7 +84,7 @@ impl User {
         let sql = format!("SELECT * FROM {} WHERE name = $1 LIMIT 1", User::TABLE);
         Ok(sqlx::query_as(&sql)
             .bind(name)
-            .fetch_one(&PG_POOL.clone())
+            .fetch_one(&*PG_POOL)
             .await?)
     }
 
@@ -103,7 +103,7 @@ impl User {
             .bind(data.password)
             .bind(data.created_at)
             .bind(data.updated_at)
-            .fetch_one(&PG_POOL.clone())
+            .fetch_one(&*PG_POOL)
             .await?)
     }
 }
@@ -114,14 +114,14 @@ impl VcIssuer {
             "SELECT * FROM {} ORDER BY service_address DESC",
             VcIssuer::TABLE
         );
-        Ok(sqlx::query_as(&sql).fetch_all(&PG_POOL.clone()).await?)
+        Ok(sqlx::query_as(&sql).fetch_all(&*PG_POOL).await?)
     }
 
     pub async fn find_by_did(did: &str) -> Result<VcIssuer> {
         let sql = format!("SELECT * FROM {} WHERE did = $1 LIMIT 1", VcIssuer::TABLE);
         Ok(sqlx::query_as(&sql)
             .bind(did)
-            .fetch_one(&PG_POOL.clone())
+            .fetch_one(&*PG_POOL)
             .await?)
     }
 
@@ -129,7 +129,7 @@ impl VcIssuer {
         let sql = format!("SELECT * FROM {} WHERE name = $1 LIMIT 1", VcIssuer::TABLE);
         Ok(sqlx::query_as(&sql)
             .bind(name)
-            .fetch_one(&PG_POOL.clone())
+            .fetch_one(&*PG_POOL)
             .await?)
     }
 
@@ -143,7 +143,7 @@ impl VcIssuer {
                 .collect::<Vec<_>>()
                 .join(",")
         );
-        Ok(sqlx::query_as(&sql).fetch_all(&PG_POOL.clone()).await?)
+        Ok(sqlx::query_as(&sql).fetch_all(&*PG_POOL).await?)
     }
 
     pub async fn create(data: CreateVcIssuerData) -> Result<VcIssuer> {
@@ -161,7 +161,7 @@ impl VcIssuer {
             .bind(data.service_address)
             .bind(data.created_at)
             .bind(data.updated_at)
-            .fetch_one(&PG_POOL.clone())
+            .fetch_one(&*PG_POOL)
             .await?)
     }
 
@@ -184,7 +184,7 @@ impl VcIssuer {
             .bind(data.status)
             .bind(data.pid)
             .bind(data.updated_at)
-            .fetch_one(&PG_POOL.clone())
+            .fetch_one(&*PG_POOL)
             .await?)
     }
 }
@@ -206,7 +206,7 @@ impl Did {
             .bind(data.encrypt_private_key)
             .bind(data.created_at)
             .bind(data.updated_at)
-            .fetch_one(&PG_POOL.clone())
+            .fetch_one(&*PG_POOL)
             .await?)
     }
 
@@ -214,7 +214,7 @@ impl Did {
         let sql = format!("SELECT * FROM {} WHERE id = $1 LIMIT 1", Did::TABLE);
         Ok(sqlx::query_as(&sql)
             .bind(id)
-            .fetch_one(&PG_POOL.clone())
+            .fetch_one(&*PG_POOL)
             .await?)
     }
 }
@@ -237,7 +237,7 @@ impl PassbaseIdentity {
             .bind(data.status)
             .bind(data.created_at)
             .bind(data.updated_at)
-            .fetch_one(&PG_POOL.clone())
+            .fetch_one(&*PG_POOL)
             .await?)
     }
 
@@ -264,7 +264,7 @@ impl PassbaseIdentity {
             .bind(data.is_adult)
             .bind(data.tx_hash)
             .bind(data.is_backend_notified)
-            .fetch_one(&PG_POOL.clone())
+            .fetch_one(&*PG_POOL)
             .await?)
     }
 
@@ -273,6 +273,6 @@ impl PassbaseIdentity {
             "SELECT * FROM {} WHERE id = $1 LIMIT 1",
             PassbaseIdentity::TABLE
         );
-        Ok(sqlx::query_as(&sql).bind(id).fetch_one(&PG_POOL.clone()).await?)
+        Ok(sqlx::query_as(&sql).bind(id).fetch_one(&*PG_POOL).await?)
     }
 }*/

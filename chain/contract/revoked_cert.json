@@ -143,31 +143,24 @@
     "name": "getRevokedInfo",
     "outputs": [
       {
-        "components": [
-          {
-            "internalType": "bool",
-            "name": "isAcitve",
-            "type": "bool"
-          },
-          {
-            "internalType": "uint256",
-            "name": "revokedTime",
-            "type": "uint256"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "certType",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "string",
-            "name": "issuer",
-            "type": "string"
-          }
-        ],
-        "internalType": "struct RevokedCert.RevokedInfo",
+        "internalType": "bool",
         "name": "",
-        "type": "tuple"
+        "type": "bool"
+      },
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "string",
+        "name": "",
+        "type": "string"
       }
     ],
     "stateMutability": "view",

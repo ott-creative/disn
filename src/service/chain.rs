@@ -124,11 +124,13 @@ impl ChainService {
 
 #[cfg(test)]
 mod tests {
+    use ethabi::FixedBytes;
+
     use super::*;
     use crate::CHAIN;
 
     #[tokio::test]
-    async fn test_send_and_query_tx() {
+    async fn test_identity_tx() {
         let contract_name = "identity".to_string();
 
         let key = uuid::Uuid::new_v4().to_string();
@@ -162,5 +164,48 @@ mod tests {
             .unwrap();
         assert_eq!(cipher_data, active_cipher_data);
         assert_eq!(active_cipher_key, cipher_keys[0]);
+    }
+
+    use std::time::SystemTime;
+
+    #[tokio::test]
+    async fn test_revoked_cert_tx() {
+        let contract_name = "revoked_cert".to_string();
+
+        let cert_no = uuid::Uuid::new_v4().to_string();
+        let revoked_time =  SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs();
+        let mut cert_type = [0u8; 32];
+        let cert_type_bytes = "identity".as_bytes();
+        cert_type[..cert_type_bytes.len()].copy_from_slice(cert_type_bytes);
+        let issuer = String::from("issuerissuerissuerissuerissuerissuer");
+        let tx_hash = CHAIN
+            .send_tx(
+                &contract_name,
+                "revoke",
+                (
+                    revoked_time,
+                    cert_type,
+                    cert_no.clone(),
+                    issuer.clone(),
+                ),
+            )
+            .await
+            .unwrap();
+        CHAIN.confirm_tx(tx_hash).await;
+        let contract = CHAIN.contract(&contract_name).unwrap();
+        let (chain_is_active, chain_revoked_time, chain_cert_type, chain_issuer): (bool, u64, FixedBytes, String) = contract
+            .query(
+                "getRevokedInfo",
+                cert_no,
+                None,
+                Options::default(),
+                None,
+            )
+            .await
+            .unwrap();
+        assert_eq!(true, chain_is_active);
+        assert_eq!(revoked_time, chain_revoked_time);
+        assert_eq!("identity", String::from_utf8(chain_cert_type).unwrap().trim_matches(char::from(0)));
+        assert_eq!(issuer, chain_issuer);
     }
 }

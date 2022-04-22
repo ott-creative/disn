@@ -120,6 +120,14 @@ enum VpVerifyResponse {
     VerifyFail(Json<String>),
 }
 
+#[derive(ApiResponse)]
+enum VcRevokeResponse {
+    #[oai(status = 200)]
+    Ok(Json<String>),
+    #[oai(status = 400)]
+    RevokeFail(Json<String>),
+}
+
 #[derive(Enum, Debug)]
 enum VcIssuerOperate {
     Run,
@@ -148,9 +156,9 @@ struct VcIssueAdultProveData {
 }
 
 #[derive(Object)]
-struct VcIssueVerifyData {
-    issuer_did: String,
-    credential: String,
+struct VcVerifyData {
+    did: String, // Issuer or Holder
+    credential_id: String,
 }
 
 #[derive(Object)]
@@ -161,9 +169,8 @@ struct VpPresentationData {
 
 #[derive(Object)]
 struct VcDecryptData {
-    encrypted: String,
-    did: String,
-    cipher: String,
+    credential_id: String,
+    issuer_did: String,
 }
 
 #[derive(Object)]
@@ -242,6 +249,12 @@ pub struct PersonalVerificationResult {
     pub checkdigit: bool,
 }
 
+#[derive(Object)]
+pub struct VcRevokeData {
+    pub issuer_did: String,
+    pub credential_id: String,
+}
+
 #[OpenApi]
 impl DidApi {
     /// Create did
@@ -293,35 +306,37 @@ impl DidApi {
         }
     }
 
-    /// Operate VC issuer Run/Restart/Disable
-    #[oai(path = "/vc/issuer/operate", method = "post")]
-    async fn vc_issuer_operate(
-        &self,
-        data: Json<VcIssuerOperateData>,
-        _auth: MyApiKeyAuthorization,
-    ) -> VcIssuerOperateResponse {
-        let did = format!("did:key:{}", data.0.did);
-        match data.0.operation {
-            VcIssuerOperate::Run => {
-                match CredentialService::vc_issuer_service_run(&did, false).await {
-                    Ok(()) => VcIssuerOperateResponse::Ok(Json("OK".to_string())),
-                    Err(err) => VcIssuerOperateResponse::OperateFail(Json(err.to_string())),
+    /*
+        /// Operate VC issuer Run/Restart/Disable
+        #[oai(path = "/vc/issuer/operate", method = "post")]
+        async fn vc_issuer_operate(
+            &self,
+            data: Json<VcIssuerOperateData>,
+            _auth: MyApiKeyAuthorization,
+        ) -> VcIssuerOperateResponse {
+            let did = format!("did:key:{}", data.0.did);
+            match data.0.operation {
+                VcIssuerOperate::Run => {
+                    match CredentialService::vc_issuer_service_run(&did, false).await {
+                        Ok(()) => VcIssuerOperateResponse::Ok(Json("OK".to_string())),
+                        Err(err) => VcIssuerOperateResponse::OperateFail(Json(err.to_string())),
+                    }
                 }
-            }
-            VcIssuerOperate::Restart => {
-                match CredentialService::vc_issuer_service_run(&did, true).await {
-                    Ok(()) => VcIssuerOperateResponse::Ok(Json("OK".to_string())),
-                    Err(err) => VcIssuerOperateResponse::OperateFail(Json(err.to_string())),
+                VcIssuerOperate::Restart => {
+                    match CredentialService::vc_issuer_service_run(&did, true).await {
+                        Ok(()) => VcIssuerOperateResponse::Ok(Json("OK".to_string())),
+                        Err(err) => VcIssuerOperateResponse::OperateFail(Json(err.to_string())),
+                    }
                 }
-            }
-            VcIssuerOperate::Disable => {
-                match CredentialService::vc_issuer_service_disable(&did).await {
-                    Ok(()) => VcIssuerOperateResponse::Ok(Json("OK".to_string())),
-                    Err(err) => VcIssuerOperateResponse::OperateFail(Json(err.to_string())),
+                VcIssuerOperate::Disable => {
+                    match CredentialService::vc_issuer_service_disable(&did).await {
+                        Ok(()) => VcIssuerOperateResponse::Ok(Json("OK".to_string())),
+                        Err(err) => VcIssuerOperateResponse::OperateFail(Json(err.to_string())),
+                    }
                 }
             }
         }
-    }
+    */
     /*
         #[oai(path = "/vc/issue/adult_prove", method = "post")]
         async fn vc_issuer_credential_issue(
@@ -347,7 +362,7 @@ impl DidApi {
             }
         }
     */
-    #[oai(path = "/vc/issue/personal-identity", method = "post")]
+    #[oai(path = "/vc/issuer/issue/personal-identity", method = "post")]
     async fn vc_issuer_issue_personal_identity(
         &self,
         data: Json<VcIssuePersonalIdentityData>,
@@ -372,16 +387,15 @@ impl DidApi {
         }
     }
 
-    #[oai(path = "/vc/decrypt", method = "post")]
+    #[oai(path = "/vc/issuer/credential/decrypt", method = "post")]
     async fn vc_credential_decrypt(
         &self,
         data: Json<VcDecryptData>,
         _auth: MyApiKeyAuthorization,
     ) -> VcDecryptResponse {
         match CredentialService::vc_credential_decrypt(
-            &format!("did:key:{}", data.0.did),
-            &data.0.encrypted,
-            &data.0.cipher,
+            &format!("did:key:{}", data.0.issuer_did),
+            &data.0.credential_id,
         )
         .await
         {
@@ -390,19 +404,36 @@ impl DidApi {
         }
     }
 
-    #[oai(path = "/vc/verify", method = "post")]
-    async fn vc_issuer_credential_verify(
+    #[oai(path = "/vc/issuer/credential/revoke", method = "post")]
+    async fn vc_credential_revoke(
         &self,
-        data: Json<VcIssueVerifyData>,
+        data: Json<VcRevokeData>,
         _auth: MyApiKeyAuthorization,
-    ) -> VcIssuerVerifyResponse {
-        match CredentialService::vc_credential_verify_with_lib(
+    ) -> VcRevokeResponse {
+        match CredentialService::vc_credential_revoke(
+            &format!("urn:uuid:{}", data.0.credential_id),
             &format!("did:key:{}", data.0.issuer_did),
-            data.0.credential,
         )
         .await
         {
-            Ok(_signed) => VcIssuerVerifyResponse::Ok(Json("OK".to_string())),
+            Ok(()) => VcRevokeResponse::Ok(Json("OK".to_string())),
+            Err(err) => VcRevokeResponse::RevokeFail(Json(err.to_string())),
+        }
+    }
+
+    #[oai(path = "/vc/verify", method = "post")]
+    async fn vc_issuer_credential_verify(
+        &self,
+        data: Json<VcVerifyData>,
+        _auth: MyApiKeyAuthorization,
+    ) -> VcIssuerVerifyResponse {
+        match CredentialService::vc_credential_verify(
+            &format!("did:key:{}", data.0.did),
+            &format!("urn:uuid:{}", data.0.credential_id),
+        )
+        .await
+        {
+            Ok(res) => VcIssuerVerifyResponse::Ok(Json(res)),
             Err(err) => VcIssuerVerifyResponse::VerifyFail(Json(err.to_string())),
         }
     }

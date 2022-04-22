@@ -18,10 +18,48 @@ use web3::{
     types::{H256, U256, U64},
     Transport,
 };
+
+pub const CONTRACT_CREDENTIALS_NAME: &str = "identity";
+pub const CONTRACT_REVOKED_NAME: &str = "revoked_cert";
+
 #[derive(Clone)]
 pub struct ChainService {
     settings: ChainSettings,
     web3: web3::Web3<Http>,
+}
+
+pub enum ChainCredentialType {
+    Identity,
+}
+
+impl Into<[u8; 32]> for ChainCredentialType {
+    fn into(self) -> [u8; 32] {
+        match self {
+            ChainCredentialType::Identity => {
+                let mut cert_type = [0u8; 32];
+                let cert_type_bytes = "identity".as_bytes();
+                cert_type[..cert_type_bytes.len()].copy_from_slice(cert_type_bytes);
+                cert_type
+            }
+        }
+    }
+}
+
+impl From<String> for ChainCredentialType {
+    fn from(s: String) -> Self {
+        match s.as_str() {
+            "identity" => ChainCredentialType::Identity,
+            _ => panic!("Unknown credential type"),
+        }
+    }
+}
+
+impl ChainCredentialType {
+    pub fn contract_name(&self) -> String {
+        match self {
+            ChainCredentialType::Identity => "identity".to_string(),
+        }
+    }
 }
 
 impl ChainService {
@@ -96,7 +134,7 @@ impl ChainService {
         Ok(receipt.and_then(|receipt| receipt.block_number))
     }
 
-    fn contract(&self, name: &str) -> Result<Contract<Http>> {
+    pub fn contract(&self, name: &str) -> Result<Contract<Http>> {
         let contract_address = Address::from_str(
             self.settings
                 .get_contract_address(name)
@@ -177,9 +215,7 @@ mod tests {
             .duration_since(SystemTime::UNIX_EPOCH)
             .unwrap()
             .as_secs();
-        let mut cert_type = [0u8; 32];
-        let cert_type_bytes = "identity".as_bytes();
-        cert_type[..cert_type_bytes.len()].copy_from_slice(cert_type_bytes);
+        let cert_type: [u8; 32] = ChainCredentialType::Identity.into();
         let issuer = String::from("issuerissuerissuerissuerissuerissuer");
         let tx_hash = CHAIN
             .send_tx(

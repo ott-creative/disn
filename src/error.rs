@@ -33,6 +33,8 @@ pub enum Error {
     OpensslError(#[from] openssl::error::ErrorStack),
     #[error(transparent)]
     Base64DecodeError(#[from] base64::DecodeError),
+    #[error(transparent)]
+    Web3ContractError(#[from] web3::contract::Error),
     //#[error(transparent)]
     //PoemError(#[from] poem::Error),
     #[error("wrong credentials")]
@@ -57,6 +59,12 @@ pub enum Error {
     VcVerifyParserJsonError,
     #[error("VC Verify error")]
     VcVerifyError,
+    #[error("VC Revoked")]
+    VcRevokedError,
+    #[error("VC Revoke not issuer")]
+    VcRevokeNotIssuer,
+    #[error("VC Credential not found")]
+    VcCredentialNotFound,
     #[error("VP Verify error")]
     VpVerifyError,
     #[error("Passbase identity read error")]
@@ -65,6 +73,8 @@ pub enum Error {
     PassbaseIdentityNotifyBackendError,
     #[error("Passbase identity update db error")]
     PassbaseIdentityUpdateError,
+    #[error("Chain data convert error")]
+    ChainDataConvertError,
 }
 pub type Result<T> = std::result::Result<T, Error>;
 

@@ -5,14 +5,19 @@ use crate::{
     },
     error::{Error, Result},
     model::{CreateVcIssuerData, UpdateVcIssuerData, VcIssuer},
-    service::did::DidService,
+    service::{
+        chain::{ChainCredentialType, CONTRACT_CREDENTIALS_NAME, CONTRACT_REVOKED_NAME},
+        did::DidService,
+    },
     utils::envelope,
     CONFIG,
 };
 use chrono::Utc;
+use ethabi::FixedBytes;
 use serde_json::{json, Value};
-use std::{collections::HashMap, process::Command};
+use std::{collections::HashMap, process::Command, time::SystemTime};
 use uuid::Uuid;
+use web3::contract::Options;
 
 use crate::CHAIN;
 use did_method_key::DIDKey;
@@ -354,7 +359,7 @@ impl CredentialService {
                 credential.credential.contract_name(),
                 "saveCredential",
                 (
-                    credential.holder_did.clone(),
+                    verifiable_credential.id.unwrap().to_string(),
                     encrypted.0.clone(),
                     vec![holder_did.encrypt_public_key, issuer_did.encrypt_public_key],
                     vec![encrypted.2.clone(), encrypted.1.clone()],
@@ -373,80 +378,147 @@ impl CredentialService {
         })
     }
 
-    /// decrypt credential
-    pub async fn vc_credential_decrypt(did: &str, encrypted: &str, cipher: &str) -> Result<String> {
-        let owner = Did::find_by_id(did).await?;
-        envelope::unseal(encrypted, cipher, &owner.encrypt_private_key)
-    }
-
-    /// verify credential
-    pub async fn vc_credential_verify(issuer_did: &str, signed_credential: String) -> Result<bool> {
-        // check if this issuer is running
-        let issuer = VcIssuer::find_by_did(issuer_did).await?;
-        if issuer.status != CredentialServiceStatus::Running as i32 {
-            tracing::info!("Issuer {} not running", issuer_did);
-            return Err(Error::VcIssuerNotRunning);
-            // TODO: should we start service here?
+    /// revoke credential
+    pub async fn vc_credential_revoke(credential_id: &str, issuer_did: &str) -> Result<()> {
+        // readout if this credential is already revoked
+        let is_revoked =
+            CredentialService::is_credential_revoked(credential_id.to_string()).await?;
+        if is_revoked {
+            // already revoked
+            tracing::info!(
+                "credential {} already revoked, issuer {}",
+                credential_id,
+                issuer_did,
+            );
+            return Ok(());
         }
 
-        let credential: Value = serde_json::from_str(&signed_credential).map_err(|e| {
-            tracing::error!("vc issuer {} failed to parse credential: {}", issuer_did, e);
-            Error::VcVerifyParserJsonError
-        })?;
+        // check if this credential is issued by this issuer
 
-        let client = reqwest::Client::new();
-        let body = json!({
-          "verifiableCredential": credential,
-          "options": {
-            "verificationMethod": format!("{}#{}", issuer.did, issuer.did.chars().skip(8).collect::<String>()),
-            "proofPurpose": "assertionMethod"
-          }
-        });
+        let decrypt = CredentialService::vc_credential_decrypt(issuer_did, credential_id).await?;
 
-        // Act
-        let response = client
-            .post(format!(
-                "http://127.0.0.1:{}/verify/credentials",
-                issuer.service_address
-            ))
-            .header("Content-Type", "application/json")
-            .json(&body)
-            .send()
-            .await
-            .map_err(|e| {
-                tracing::error!(
-                    "vc issuer {} failed to verify credential: {}",
-                    issuer_did,
-                    e
-                );
-                Error::VcVerifyError
+        // check if id match
+        let credential_json = serde_json::from_str::<VerifiableCredential>(&decrypt)?;
+        if !credential_json.id.unwrap().to_string().eq(credential_id) {
+            return Err(Error::VcRevokeNotIssuer);
+        }
+
+        // perform revoke
+        let revoked_time = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        let cert_type: [u8; 32] = ChainCredentialType::Identity.into();
+        let tx_hash = CHAIN
+            .send_tx(
+                CONTRACT_REVOKED_NAME,
+                "revoke",
+                (
+                    revoked_time,
+                    cert_type,
+                    credential_id.to_string(),
+                    issuer_did.to_string(),
+                ),
+            )
+            .await?;
+
+        tracing::info!("credential revoke hash: {}", tx_hash);
+
+        Ok(())
+    }
+
+    /// decrypt credential
+    pub async fn vc_credential_decrypt(did: &str, credential_id: &str) -> Result<String> {
+        let controller = Did::find_by_id(did).await?;
+
+        let contract = CHAIN.contract(CONTRACT_CREDENTIALS_NAME)?;
+        let (cipher_data, cipher_key): (String, String) = contract
+            .query(
+                "getCredential",
+                (credential_id.to_string(), controller.encrypt_public_key),
+                None,
+                Options::default(),
+                None,
+            )
+            .await?;
+
+        tracing::info!("vc_credential_decrypt cipher_data: {}", cipher_data);
+        if cipher_data.is_empty() {
+            return Err(Error::VcCredentialNotFound);
+        }
+
+        Ok(envelope::unseal(
+            &cipher_data,
+            &cipher_key,
+            &controller.encrypt_private_key,
+        )?)
+    }
+    /*
+        /// verify credential
+        pub async fn vc_credential_verify(issuer_did: &str, signed_credential: String) -> Result<bool> {
+            // check if this issuer is running
+            let issuer = VcIssuer::find_by_did(issuer_did).await?;
+            if issuer.status != CredentialServiceStatus::Running as i32 {
+                tracing::info!("Issuer {} not running", issuer_did);
+                return Err(Error::VcIssuerNotRunning);
+                // TODO: should we start service here?
+            }
+
+            let credential: Value = serde_json::from_str(&signed_credential).map_err(|e| {
+                tracing::error!("vc issuer {} failed to parse credential: {}", issuer_did, e);
+                Error::VcVerifyParserJsonError
             })?;
 
-        let vr = response.json::<VerifyResult>().await.map_err(|e| {
-            tracing::error!("vc issuer {} failed to parse response: {}", issuer_did, e);
-            Error::VcIssueError
-        })?;
+            let client = reqwest::Client::new();
+            let body = json!({
+              "verifiableCredential": credential,
+              "options": {
+                "verificationMethod": format!("{}#{}", issuer.did, issuer.did.chars().skip(8).collect::<String>()),
+                "proofPurpose": "assertionMethod"
+              }
+            });
 
-        if vr.errors.len() > 0 {
-            tracing::error!(
-                "vc issuer {} failed to verify credential: {:?}",
-                issuer_did,
-                vr.errors
-            );
-            return Err(Error::VcVerifyError);
-        } else {
-            tracing::info!("vc issuer {} verified credential", issuer_did);
-            return Ok(true);
+            // Act
+            let response = client
+                .post(format!(
+                    "http://127.0.0.1:{}/verify/credentials",
+                    issuer.service_address
+                ))
+                .header("Content-Type", "application/json")
+                .json(&body)
+                .send()
+                .await
+                .map_err(|e| {
+                    tracing::error!(
+                        "vc issuer {} failed to verify credential: {}",
+                        issuer_did,
+                        e
+                    );
+                    Error::VcVerifyError
+                })?;
+
+            let vr = response.json::<VerifyResult>().await.map_err(|e| {
+                tracing::error!("vc issuer {} failed to parse response: {}", issuer_did, e);
+                Error::VcIssueError
+            })?;
+
+            if vr.errors.len() > 0 {
+                tracing::error!(
+                    "vc issuer {} failed to verify credential: {:?}",
+                    issuer_did,
+                    vr.errors
+                );
+                return Err(Error::VcVerifyError);
+            } else {
+                tracing::info!("vc issuer {} verified credential", issuer_did);
+                return Ok(true);
+            }
         }
-    }
-
-    pub async fn vc_credential_verify_with_lib(
-        issuer_did: &str,
-        signed_credential: String,
-    ) -> Result<bool> {
-        let _issuer = VcIssuer::find_by_did(issuer_did).await?;
-        let credential: Value = serde_json::from_str(&signed_credential).map_err(|e| {
-            tracing::error!("vc verify {} failed to parse credential: {}", issuer_did, e);
+    */
+    pub async fn vc_credential_verify(did: &str, credential_id: &str) -> Result<String> {
+        let decrypt = CredentialService::vc_credential_decrypt(did, credential_id).await?;
+        let credential: Value = serde_json::from_str(&decrypt).map_err(|e| {
+            tracing::error!("vc verify {} failed to parse credential: {}", did, e);
             Error::VcVerifyParserJsonError
         })?;
 
@@ -457,16 +529,42 @@ impl CredentialService {
             .await;
 
         if result.errors.len() > 0 {
-            tracing::error!(
-                "vc issuer {} failed to verify credential: {:?}",
-                issuer_did,
-                result.errors
-            );
+            tracing::error!("{} failed to verify credential: {:?}", did, result.errors);
             return Err(Error::VcVerifyError);
         } else {
-            tracing::info!("vc issuer {} verified credential", issuer_did);
-            return Ok(true);
+            tracing::info!("{} verified credential", did);
+            // perform chain check to ensure it's not revoked
+
+            let is_revoked = CredentialService::is_credential_revoked(
+                verifiable_credential.id.unwrap().to_string(),
+            )
+            .await?;
+            if is_revoked {
+                return Err(Error::VcRevokedError);
+            } else {
+                return Ok("OK".to_string());
+            }
         }
+    }
+
+    async fn is_credential_revoked(credential_id: String) -> Result<bool> {
+        let contract = CHAIN.contract(CONTRACT_REVOKED_NAME).unwrap();
+        let (is_revoke_active, _chain_revoked_time, _chain_cert_type, _chain_issuer): (
+            bool,
+            u64,
+            FixedBytes,
+            String,
+        ) = contract
+            .query(
+                "getRevokedInfo",
+                credential_id,
+                None,
+                Options::default(),
+                None,
+            )
+            .await?;
+
+        Ok(is_revoke_active)
     }
 
     /// init pre-defined vc issuer, this should be called when system start

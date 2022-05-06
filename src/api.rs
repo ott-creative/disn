@@ -188,7 +188,7 @@ pub struct VcIssuePersonalIdentityData {
 #[derive(Object, Serialize, Deserialize)]
 pub struct Face {
     #[serde(rename = "isIdentical")]
-    pub is_identical: bool,
+    pub isIdentical: bool,
     pub confidence: String,
 }
 
@@ -201,37 +201,36 @@ pub struct PartyResult {
 
 #[derive(Object, Serialize, Deserialize)]
 pub struct PersonalInfo {
-    #[serde(rename = "documentNumber")]
-    pub document_number: String,
+    pub documentNumber: String,
     #[serde(rename = "firstName")]
-    pub first_name: String,
+    pub firstName: String,
     #[serde(rename = "lastName")]
-    pub last_name: String,
+    pub lastName: String,
     #[serde(rename = "fullName")]
-    pub full_name: String,
+    pub fullName: String,
     pub sex: String,
     pub dob: String,
     pub expiry: String,
     #[serde(rename = "daysToExpiry")]
-    pub days_to_expiry: i64,
+    pub daysToExpiry: i64,
     pub issued: String,
     #[serde(rename = "daysFromIssue")]
-    pub days_from_issue: i64,
+    pub daysFromIssue: i64,
     pub address1: String,
     #[serde(rename = "optionalData")]
-    pub optional_data: String,
+    pub optionalData: String,
     #[serde(rename = "documentType")]
-    pub document_type: String,
+    pub documentType: String,
     #[serde(rename = "documentSide")]
-    pub document_side: String,
+    pub documentSide: String,
     #[serde(rename = "issueAuthority")]
-    pub issue_authority: String,
+    pub issueAuthority: String,
     #[serde(rename = "issuerOrg_full")]
-    pub issuer_org_full: String,
+    pub issuerOrg_full: String,
     #[serde(rename = "issuerOrg_iso2")]
-    pub issuer_org_iso2: String,
+    pub issuerOrg_iso2: String,
     #[serde(rename = "issuerOrg_iso3")]
-    pub issuer_org_iso3: String,
+    pub issuerOrg_iso3: String,
     pub nationality_full: String,
     pub nationality_iso2: String,
     pub nationality_iso3: String,

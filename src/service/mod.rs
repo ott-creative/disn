@@ -1,4 +1,4 @@
-pub mod aws;
+// pub mod aws;
 pub mod chain;
 pub mod did;
 //pub mod passbase;

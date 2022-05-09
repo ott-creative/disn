@@ -103,7 +103,9 @@ impl From<PartyResult> for CredentialPersonalIdentity {
 fn convert_expiry(expiry: &str) -> String {
     let utc = Utc;
     let d1 = Utc::now();
-    let d2 = utc.datetime_from_str(expiry, "%Y/%m/%d").unwrap();
+    let d2 = utc
+        .datetime_from_str(&format!("{} 00:00:00", expiry), "%Y/%m/%d %H:%M:%S")
+        .unwrap();
     let duration = d2.signed_duration_since(d1);
 
     if duration.num_days() > MAX_EXPIRY_DAYS {
@@ -111,5 +113,28 @@ fn convert_expiry(expiry: &str) -> String {
             .to_rfc3339_opts(SecondsFormat::Secs, true);
     } else {
         return d2.to_rfc3339_opts(SecondsFormat::Secs, true);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_convert_expiry() {
+        // in MAX_EXPIRY_DAYS
+        let expiry = "2022/09/28";
+        let converted = convert_expiry(expiry);
+
+        assert_eq!(converted, "2022-09-28T00:00:00Z");
+
+        // over MAX_EXPIRY_DAYS
+        let expiry = "2024/09/28";
+        let converted = convert_expiry(expiry);
+
+        let expected = (Utc::now() + Duration::days(MAX_EXPIRY_DAYS))
+            .to_rfc3339_opts(SecondsFormat::Secs, true);
+
+        assert_eq!(converted, expected);
     }
 }

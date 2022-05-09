@@ -1,7 +1,10 @@
 use super::VerifiableCredential;
 use crate::api::PartyResult;
+use chrono::{Duration, SecondsFormat, TimeZone, Utc};
 use serde_json::{json, Value};
 use uuid::Uuid;
+
+const MAX_EXPIRY_DAYS: i64 = 180;
 
 pub struct CredentialPersonalIdentity {
     pub document_number: String,
@@ -40,6 +43,7 @@ impl VerifiableCredential for CredentialPersonalIdentity {
             "type": ["VerifiableCredential"],
             "issuer": issuer,
             "holder": holder,
+            "expirationDate": convert_expiry(&self.expiry),
             "credentialSubject": {
                 "id": holder,
                 "documentNumber": self.document_number,
@@ -93,5 +97,19 @@ impl From<PartyResult> for CredentialPersonalIdentity {
             verification_face_result: party.verification.result.face,
             verification_digit_result: party.verification.result.checkdigit,
         }
+    }
+}
+
+fn convert_expiry(expiry: &str) -> String {
+    let utc = Utc;
+    let d1 = Utc::now();
+    let d2 = utc.datetime_from_str(expiry, "%Y/%m/%d").unwrap();
+    let duration = d2.signed_duration_since(d1);
+
+    if duration.num_days() > MAX_EXPIRY_DAYS {
+        return (Utc::now() + Duration::days(MAX_EXPIRY_DAYS))
+            .to_rfc3339_opts(SecondsFormat::Secs, true);
+    } else {
+        return d2.to_rfc3339_opts(SecondsFormat::Secs, true);
     }
 }
